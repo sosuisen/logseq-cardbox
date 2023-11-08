@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns';
 
 import './App.css'
-import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
+// import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 
 
 
