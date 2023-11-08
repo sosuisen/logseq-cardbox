@@ -30,7 +30,6 @@ function main() {
       <App />
     </React.StrictMode>,
   )
-
 }
 
 // bootstrap
@@ -38,6 +37,4 @@ function main() {
 logseq.ready({
   openCardBox: () => logseq.showMainUI()
 }, main).catch(console.error)
-
-//logseq.ready(main).catch(console.error)
 

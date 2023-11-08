@@ -1,38 +1,67 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useEffect } from 'react'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const getLastUpdatedTime = async (fileName: string) => {
+  const res = await logseq.Git.execCommand(['log', '-1', '--format="%ad"', '--', `pages/${fileName}.md`]);
+  // console.log(res);
+  // Wed Nov 8 02:37:35 2023 +0900
+  const regex = /(\w{3}) (\w{3}) (\d{1,2}) (\d{2}):(\d{2}):(\d{2}) (\d{4}) (\+\d{4})/;
+  const match = res.stdout.match(regex);
+  if (match) {
+    return `${match[1]} ${match[2]} ${match[1]} ${match[3]} ${match[4]}:${match[5]}:${match[6]} ${match[7]}`;
+  }
+  return "";
+};
 
-  return (
-    <>
-      <button onClick={() => logseq.hideMainUI()}>
-        close
-      </button>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+function App() {
+  // const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const pages = await logseq.Editor.getAllPages();
+      if (!pages) return [];
+      for(const page of pages) {
+        if (page["journal?"]) continue;
+
+        const name = page.originalName.replace(/\//g, '___');
+        const updatedTime = await getLastUpdatedTime(name);
+
+        if (updatedTime === "") continue;
+
+        const box = {
+          name: page.originalName,
+          updatedTime, 
+          uuid: page.uuid,
+        };
+        console.log(box);
+      }
+//      const results = await Promise.all(pages.map(page =>));
+
+//      console.log(results);
+      /*
+        return {
+          updatedAt: new Date(page.updatedAt).toUTCString(),
+          name,
+        };
+      });
+      const results = pages.sort((a, b) => {
+        return a.updatedAt > b.updatedAt ? -1 : 1
+      })
+    */
+    }
+    fetchData();
+
+
+  }, []);
+
+return (
+  <>
+    <button onClick={() => logseq.hideMainUI()}>
+      close
+    </button>
+
+  </>
+)
 }
 
 export default App
