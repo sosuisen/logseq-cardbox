@@ -27,8 +27,27 @@
   font-size: 18px;
 }
 
+.control {
+  height: 40px;
+}
+
 .close-btn {
   float: right;
+}
+
+.open-btn {
+  float: left;
+}
+
+.open-btn-label {
+  float: left;
+  font-size: 14px;
+  margin-top: 5px;
+  margin-left: 5px;
+}
+
+.tile {
+  float: none;
 }
 
 .box-title {
