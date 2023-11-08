@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { format } from 'date-fns';
 
 import './App.css'
+import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 
 
 
@@ -76,6 +77,19 @@ function App() {
         console.log(box);
         setBoxes(boxes => [...boxes, box].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime))
       }
+      /*
+      logseq.DB.onChanged(async (changes: {
+        blocks: BlockEntity[];
+        txData: IDatom[];
+        txMeta?: {
+            outlinerOp: string;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            [key: string]: any;
+        };
+    }) => {
+        console.log(changes);
+      });
+      */
     }
     fetchData();
   }, []);
