@@ -20,9 +20,8 @@ const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string)
     });
     if (res) break;
   }
-  if (!res) return "";
+  if (!res) return '';
 
-  // console.log(res);
   // Wed Nov 8 02:37:35 2023 +0900
   const regex = /(\w{3}) (\w{3}) (\d{1,2}) (\d{2}):(\d{2}):(\d{2}) (\d{4}) (\+\d{4})/;
   const match = res!.stdout.match(regex);
@@ -31,17 +30,19 @@ const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string)
     const date = new Date(`${match[1]} ${match[2]} ${match[1]} ${match[3]} ${match[4]}:${match[5]}:${match[6]} ${match[7]}`);
     const dateUserFormat = format(date, preferredDateFormat);
     return {
-      formatted: dateUserFormat,
+      formattedDate: dateUserFormat,
+      time: `${match[4]}:${match[5]}:${match[6]}`,
       unixTime: date.getTime(),
     };
   }
-  return "";
+  return '';
 };
 
 type Box = {
   originalName: string;
   updatedTime: {
-    formatted: string;
+    formattedDate: string;
+    time: string;
     unixTime: number;
   };
   uuid: string;
@@ -49,23 +50,23 @@ type Box = {
 
 function App() {
   const [boxes, setBoxes] = useState<Box[]>([]);
-  const [currentGraph, setCurrentGraph] = useState<string>("");
-
+  const [currentGraph, setCurrentGraph] = useState<string>('');
+  console.log(currentGraph);
   useEffect(() => {
     const fetchData = async () => {
       const { preferredDateFormat, currentGraph } = await logseq.App.getUserConfigs();
-      const arr = currentGraph.split("/");
+      const arr = currentGraph.split('/');
       setCurrentGraph(arr[arr.length - 1]);
-      console.log("fetching...");
+      console.log('fetching...');
 
       const pages = await logseq.Editor.getAllPages();
       if (!pages) return [];
       for (const page of pages) {
-        if (page["journal?"]) continue;
+        if (page['journal?']) continue;
 
         const updatedTime = await getLastUpdatedTime(page.originalName.replace(/\//g, '___'), preferredDateFormat);
 
-        if (updatedTime === "") continue;
+        if (updatedTime === '') continue;
 
         const box = {
           originalName: page.originalName,
@@ -79,27 +80,45 @@ function App() {
     fetchData();
   }, []);
 
-  const boxOnClick = () => {
-    setTimeout(() => { logseq.hideMainUI() }, 500);
+  const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.shiftKey) {
+      logseq.Editor.openInRightSidebar(box.uuid);
+    }
+    else {
+      logseq.App.pushState('page', {
+        name: box.originalName,
+      });
+    }
+    logseq.hideMainUI();
   };
 
   const boxElements = boxes.map((box: Box) => (
-    <a href={`logseq://graph/${currentGraph}?page=${box.uuid}`}>
-      <div onClick={() => boxOnClick()}>
+    // Do not use uuid because pagebar is not shown properly.
+    // <a href={`logseq://graph/${currentGraph}?page=${box.uuid}`}>
+    // deeplink is very slow. Use pushState() instead.
+    // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
+    <div className='box' onClick={e => boxOnClick(box, e)}>
+      <div className='box-title'>
         {box.originalName}
-        <span>
-          {box.updatedTime.formatted}
-        </span>
       </div>
-    </a>
+      <div className='box-date'>
+        {box.updatedTime.formattedDate}<br/>
+        {box.updatedTime.time}
+      </div>
+    </div>
   ));
 
   return (
     <>
-      <button onClick={() => logseq.hideMainUI()}>
-        close
-      </button>
-      {boxElements}
+      <div className='control'>
+        <span className='cardbox-title'>CardBox</span>
+        <button className='close-btn' onClick={() => logseq.hideMainUI()}>
+          close
+        </button>
+      </div>
+      <div className='box-tile'>
+        {boxElements}
+      </div>
     </>
   )
 }

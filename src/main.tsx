@@ -35,6 +35,8 @@ function main() {
 // bootstrap
 
 logseq.ready({
-  openCardBox: () => logseq.showMainUI()
+  openCardBox: () => {
+    logseq.showMainUI();
+  }
 }, main).catch(console.error)
 
