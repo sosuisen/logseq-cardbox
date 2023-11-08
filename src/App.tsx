@@ -157,13 +157,13 @@ function App() {
   return (
     <>
       <div className='control'>
-        <span className='cardbox-title'>CardBox</span>
-        <button className='open-btn' onClick={() => openDirectoryPicker()}>
-          pagesを選択
-        </button>
-        { dirHandle === undefined && <div className='open-btn-label'>Logseqのグラフの保存先にあるpagesディレクトリを選択してください。</div> }
+        <div className='cardbox-title'>CardBox</div>
         <button className='close-btn' onClick={() => logseq.hideMainUI()}>
           close
+        </button>
+        { dirHandle === undefined && <div className='open-btn-label'>Logseqのグラフの保存先にあるpagesディレクトリを選択してください。</div> }
+        <button className='open-btn' onClick={() => openDirectoryPicker()}>
+          pagesを選択
         </button>
       </div>
       <div className='tile'>

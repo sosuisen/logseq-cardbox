@@ -11,7 +11,7 @@ function main() {
 
   logseq.setMainUIInlineStyle({
     position: 'fixed',
-    zIndex: 13,
+    zIndex: 20,
   })
 
   logseq.App.registerUIItem('pagebar', {

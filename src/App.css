@@ -24,30 +24,33 @@
 }
 
 .cardbox-title {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .control {
   height: 40px;
 }
 
-.close-btn {
-  float: right;
-}
-
 .open-btn {
-  float: left;
+  float: right;
+  margin-left: 24px;
+  margin-top: 4px;
 }
 
 .open-btn-label {
-  float: left;
+  float: right;
   font-size: 14px;
-  margin-top: 5px;
+  margin-top: 9px;
   margin-left: 5px;
 }
 
+.close-btn {
+  float: right;
+  margin-top: 4px;  
+}
+
 .tile {
-  float: none;
+  width: 100%;
 }
 
 .box-title {
