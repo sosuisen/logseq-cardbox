@@ -5,6 +5,12 @@ import './index.css'
 import '@logseq/libs'
 
 function main() {
+  // Ctrl+Shift+Enter or Command+Shift+Enter
+  logseq.App.registerCommandShortcut(
+    { binding: 'mod+shift+enter' },
+    () => logseq.showMainUI(),
+  );
+
   logseq.provideStyle(`
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
   `)
