@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns';
 import './App.css'
-import { PageEntity } from '@logseq/libs/dist/LSPlugin.user';
+import { BlockEntity, IDatom, PageEntity } from '@logseq/libs/dist/LSPlugin.user';
 // import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 
 const getLastUpdatedTime = async (page: PageEntity, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
@@ -121,6 +121,45 @@ function App() {
     }
   }, [dirHandle]);
 
+  useEffect(() => {
+    logseq.DB.onChanged(async (changes: {
+      blocks: BlockEntity[];
+      txData: IDatom[];
+      txMeta?: {
+        outlinerOp: string;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [key: string]: any;
+      };
+    }) => {
+      let operation = '';
+      for (const block of changes.blocks) {
+        if (Object.prototype.hasOwnProperty.call(block, 'path')) {
+          if (changes.txData.length === 0) continue;
+          if (changes.txData[0][1] === 'lastModifiedAt') {
+            operation = 'modified'
+            console.log("File modified: " + block.path);
+            break;
+          }
+        }
+      }
+      if (operation === '') {
+        for (const data of changes.txData) {
+          if (data.length === 5 && data[1] === 'path') {
+            const path = data[2];
+            let createOrDetete = 'create';
+            if (data[4] === false) {
+              createOrDetete = 'delete';
+            }
+            operation = createOrDetete;
+            console.log(`File ${createOrDetete}: ${path}`);
+            break;
+          }
+        }
+      }
+      console.log(changes);
+    });
+  }, []);
+
   const openDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker();
     setDirHandle(handle);
@@ -162,22 +201,27 @@ function App() {
           <div className='cardbox-title'>CardBox</div>
         </div>
         <div className='control-right'>
-          <button className='close-btn' onClick={() => logseq.hideMainUI()}>
-            close
-          </button>
+          <div className='close-btn' onClick={() => logseq.hideMainUI()}>
+            <span className='material-symbols-outlined'>
+              close
+            </span>
+          </div>
           <button className='open-btn-control' style={{ display: dirHandle === undefined ? 'none' : 'block' }} onClick={() => openDirectoryPicker()}>
             pagesを選択
           </button>
         </div>
       </div>
       <div className='dir-not-selected' style={{ display: dirHandle === undefined ? 'block' : 'none' }}>
-        <div className='open-btn-label'>Logseqのグラフの保存先にあるpagesフォルダを選択してください。</div>
+        <div className='open-btn-label'>Logseqのグラフの保存先フォルダにあるpagesフォルダを選択してください。</div>
         <button className='open-btn' onClick={() => openDirectoryPicker()}>
           pagesを選択
         </button>
       </div>
-      <div className='tile'>
+      <div className='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex'}}>
         {boxElements}
+      </div>
+      <div className='footer'>
+        ※日誌やホワイトボードは含まれません。タイトルのみのページは表示されません。
       </div>
     </>
   )

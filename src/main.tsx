@@ -40,3 +40,12 @@ logseq.ready({
   }
 }, main).catch(console.error)
 
+window.addEventListener("keydown", (event) => {
+  switch (event.key) {
+    case "Escape":
+      logseq.hideMainUI();
+      break;
+    default:
+      return;
+  }
+});
