@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns';
 import './App.css'
-import { BlockEntity, IDatom, PageEntity } from '@logseq/libs/dist/LSPlugin.user';
-// import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
+import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 
-const getLastUpdatedTime = async (page: PageEntity, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
+type UpdatedTime = {
+  formattedDate: string;
+  time: string;
+  unixTime: number;
+};
+
+type Box = {
+  originalName: string;
+  updatedTime: UpdatedTime;
+};
+
+type Operation = 'create' | 'modified' | 'delete' | '';
+
+const getLastUpdatedTime = async (originalName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
   // Encode characters that are not allowed in windows file name.
-  const fileName = page.originalName
+  const fileName = originalName
     .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
     .replace(/:/g, '%3A')
@@ -24,7 +36,6 @@ const getLastUpdatedTime = async (page: PageEntity, preferredDateFormat: string,
   const fileHandle = await handle.getFileHandle(path).catch(() => {
     // Empty page is not saved as a file.
     console.log(`Failed to get file handle: ${path}`);
-    // console.log(page);
     return null;
   });
   if (!fileHandle) return '';
@@ -40,50 +51,6 @@ const getLastUpdatedTime = async (page: PageEntity, preferredDateFormat: string,
     time: `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`,
     unixTime: date.getTime(),
   };
-
-  /*
-    let res;
-    let attempts = 0;
-    const maxRetries = 7;
-  
-    while (attempts < maxRetries) {
-  
-      res = await logseq.Git.execCommand(['log', '-1', '--format="%ad"', '--', `pages/${fileName}.md`]).catch(e => {
-        console.log(`Attempt ${attempts + 1} for ${fileName} failed:`, e);
-        attempts++;
-        if (attempts >= maxRetries) {
-          console.log(`Failed after ${maxRetries} attempts: ${fileName}`);
-        }
-      });
-      if (res) break;
-    }
-    if (!res) return '';
-  
-    // Wed Nov 8 02:37:35 2023 +0900
-    const regex = /(\w{3}) (\w{3}) (\d{1,2}) (\d{2}):(\d{2}):(\d{2}) (\d{4}) (\+\d{4})/;
-    const match = res!.stdout.match(regex);
-    if (match) {
-      // remove timezone
-      const date = new Date(`${match[1]} ${match[2]} ${match[1]} ${match[3]} ${match[4]}:${match[5]}:${match[6]} ${match[7]}`);
-      const dateUserFormat = format(date, preferredDateFormat);
-      return {
-        formattedDate: dateUserFormat,
-        time: `${match[4]}:${match[5]}:${match[6]}`,
-        unixTime: date.getTime(),
-      };
-    }
-    return '';
-    */
-};
-
-type Box = {
-  originalName: string;
-  updatedTime: {
-    formattedDate: string;
-    time: string;
-    unixTime: number;
-  };
-  uuid: string;
 };
 
 function App() {
@@ -91,6 +58,95 @@ function App() {
 
   const [boxes, setBoxes] = useState<Box[]>([]);
   // const [currentGraph, setCurrentGraph] = useState<string>('');
+
+  const onFileChanged = useCallback(async (changes: {
+    blocks: BlockEntity[];
+    txData: IDatom[];
+    txMeta?: {
+      outlinerOp: string;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      [key: string]: any;
+    };
+  }) => {
+    const { preferredDateFormat } = await logseq.App.getUserConfigs();
+
+    let operation: Operation = '';
+    let path = '';
+    for (const block of changes.blocks) {
+      if (Object.prototype.hasOwnProperty.call(block, 'path')) {
+        if (changes.txData.length === 0) continue;
+        if (changes.txData[0][1] === 'lastModifiedAt') {
+          operation = 'modified';
+          path = block.path;
+          console.log("File modified: " + block.path);
+          break;
+        }
+      }
+    }
+    if (operation === '') {
+      for (const data of changes.txData) {
+        if (data.length === 5 && data[1] === 'path') {
+          path = data[2];
+          let createOrDelete: Operation = 'create';
+          if (data[4] === false) {
+            createOrDelete = 'delete';
+          }
+          operation = createOrDelete;
+          console.log(`File ${createOrDelete}: ${path}`);
+          break;
+        }
+      }
+    }
+
+    // Ignore create event because the file is not created yet.
+    if ((operation == 'modified' || operation == 'delete')
+      && dirHandle !== undefined) {
+      const ma = path.match(/pages\/(.*)\.md/);
+      if (ma) {
+        const originalName = ma[1];
+
+        let updatedTime: UpdatedTime | '' = {
+          formattedDate: '',
+          time: '',
+          unixTime: 0,
+        };
+
+        if (operation === 'modified') {
+          updatedTime = await getLastUpdatedTime(originalName, preferredDateFormat, dirHandle!);
+          if (updatedTime === '') {
+            console.log('Failed to get updated time.');
+            return;
+          }
+        }
+        console.log(`${operation}, ${originalName}`);
+
+        const box: Box = {
+          originalName,
+          updatedTime,
+        };
+
+        if (operation === 'modified') {
+          const target = boxes.find(box => box.originalName === originalName ? true : false);
+          if (target) target.updatedTime = updatedTime;
+          else {
+            console.log('Not found in boxes. Create: ' + originalName);
+            setBoxes(boxes => [box, ...boxes]);
+          }
+          setBoxes(boxes => [...boxes].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime));
+        }
+        /*else if (operation === 'create') {
+          setBoxes(boxes => [box, ...boxes]);
+        }*/
+        else if (operation === 'delete') {
+          setBoxes(boxes => [...boxes.filter(box => box.originalName !== originalName)])
+        }
+        else {
+          console.log('Unknown operation: ' + operation);
+        }
+      }
+    }
+    // console.log(changes);
+  }, [boxes, dirHandle]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -103,15 +159,14 @@ function App() {
       for (const page of pages) {
         if (page['journal?']) continue;
 
-        const updatedTime = await getLastUpdatedTime(page, preferredDateFormat, dirHandle!);
+        const updatedTime = await getLastUpdatedTime(page.originalName, preferredDateFormat, dirHandle!);
         if (updatedTime === '') continue;
 
         const box = {
           originalName: page.originalName,
           updatedTime,
-          uuid: page.uuid,
         };
-        // console.log(box);
+        console.log(box);
         setBoxes(boxes => [...boxes, box].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime))
       }
     };
@@ -122,43 +177,12 @@ function App() {
   }, [dirHandle]);
 
   useEffect(() => {
-    logseq.DB.onChanged(async (changes: {
-      blocks: BlockEntity[];
-      txData: IDatom[];
-      txMeta?: {
-        outlinerOp: string;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [key: string]: any;
-      };
-    }) => {
-      let operation = '';
-      for (const block of changes.blocks) {
-        if (Object.prototype.hasOwnProperty.call(block, 'path')) {
-          if (changes.txData.length === 0) continue;
-          if (changes.txData[0][1] === 'lastModifiedAt') {
-            operation = 'modified'
-            console.log("File modified: " + block.path);
-            break;
-          }
-        }
-      }
-      if (operation === '') {
-        for (const data of changes.txData) {
-          if (data.length === 5 && data[1] === 'path') {
-            const path = data[2];
-            let createOrDetete = 'create';
-            if (data[4] === false) {
-              createOrDetete = 'delete';
-            }
-            operation = createOrDetete;
-            console.log(`File ${createOrDetete}: ${path}`);
-            break;
-          }
-        }
-      }
-      console.log(changes);
-    });
-  }, []);
+    // onChanged returns a function to unsubscribe.
+    // Use 'return unsubscribe_function' to call unsubscribe_function
+    // when component is unmounted, otherwise a lot of listeners will be left.
+    return logseq.DB.onChanged(onFileChanged);
+  }, [onFileChanged]);
+
 
   const openDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker();
@@ -167,7 +191,7 @@ function App() {
 
   const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
     if (e.shiftKey) {
-      logseq.Editor.openInRightSidebar(box.uuid);
+      logseq.Editor.openInRightSidebar(box.originalName);
     }
     else {
       logseq.App.pushState('page', {
@@ -217,7 +241,7 @@ function App() {
           pagesを選択
         </button>
       </div>
-      <div className='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex'}}>
+      <div className='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>
