@@ -194,6 +194,7 @@ function App() {
     };
 
     if (dirHandle) {
+      setBoxes([]);
       fetchData();
     }
   }, [dirHandle]);
@@ -253,7 +254,7 @@ function App() {
             </span>
           </div>
           <button className='open-btn-control' style={{ display: dirHandle === undefined ? 'none' : 'block' }} onClick={() => openDirectoryPicker()}>
-            pagesを選択
+            pagesを再選択
           </button>
         </div>
       </div>
