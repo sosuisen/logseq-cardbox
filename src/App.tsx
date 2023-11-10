@@ -16,9 +16,9 @@ type Box = {
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
-const getLastUpdatedTime = async (originalName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
+const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
-  const fileName = originalName
+  return name
     .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
     .replace(/:/g, '%3A')
@@ -28,7 +28,22 @@ const getLastUpdatedTime = async (originalName: string, preferredDateFormat: str
     .replace(/\|/g, '%7C')
     .replace(/\?/g, '%3F')
     .replace(/\*/g, '%2A');
+};
 
+const decodeLogseqFileName = (name: string) => {
+  return name
+    .replace(/%3C/g, '<')
+    .replace(/%3E/g, '>')
+    .replace(/%3A/g, ':')
+    .replace(/%22/g, '"')
+    .replace(/___/g, '/')
+    .replace(/%5C/g, '\\')
+    .replace(/%7C/g, '|')
+    .replace(/%3F/g, '?')
+    .replace(/%2A/g, '*');
+};
+
+const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
   const path = `${fileName}.md`;
@@ -101,7 +116,7 @@ function App() {
       && dirHandle !== undefined) {
       const ma = path.match(/pages\/(.*)\.md/);
       if (ma) {
-        const originalName = ma[1];
+        const fileName = ma[1];
 
         let updatedTime: UpdatedTime | '' = {
           formattedDate: '',
@@ -110,14 +125,15 @@ function App() {
         };
 
         if (operation === 'modified') {
-          updatedTime = await getLastUpdatedTime(originalName, preferredDateFormat, dirHandle!);
+          updatedTime = await getLastUpdatedTime(fileName, preferredDateFormat, dirHandle!);
           if (updatedTime === '') {
             console.log('Failed to get updated time.');
             return;
           }
         }
-        console.log(`${operation}, ${originalName}`);
+        console.log(`${operation}, ${fileName}`);
 
+        const originalName = decodeLogseqFileName(fileName);
         const box: Box = {
           originalName,
           updatedTime,
@@ -165,7 +181,7 @@ function App() {
       for (const page of pages) {
         if (page['journal?']) continue;
 
-        const updatedTime = await getLastUpdatedTime(page.originalName, preferredDateFormat, dirHandle!);
+        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), preferredDateFormat, dirHandle!);
         if (updatedTime === '') continue;
 
         const box = {
