@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import '@logseq/libs'
+import "./i18n/configs";
 
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter

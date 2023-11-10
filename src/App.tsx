@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
+import { useTranslation } from "react-i18next";
+import i18n from "i18next";
 import './App.css'
 
 type UpdatedTime = {
@@ -72,19 +74,15 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
 function App() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle>();
   const [boxes, setBoxes] = useState<Box[]>([]);
-  const [currentGraph, setCurrentGraph] = useState<string>(''); 
+  const [currentGraph, setCurrentGraph] = useState<string>('');
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
-  const [preferredLanguage, setPreferredLanguage] = useState<string>('');
-  
-  console.log(preferredLanguage);
-
 
   useEffect(() => {
     const getUserConfigs = async () => {
       const { currentGraph, preferredDateFormat, preferredLanguage } = await logseq.App.getUserConfigs();
       setCurrentGraph(currentGraph);
       setPreferredDateFormat(preferredDateFormat);
-      setPreferredLanguage(preferredLanguage);
+      i18n.changeLanguage(preferredLanguage);
     };
     getUserConfigs();
   }, []);
@@ -234,6 +232,7 @@ function App() {
     </div>
   ));
 
+  const { t } = useTranslation();
   return (
     <>
       <div className='control'>
@@ -248,23 +247,23 @@ function App() {
             </span>
           </div>
           <button className='open-btn-control' style={{ display: dirHandle === undefined ? 'none' : 'block' }} onClick={() => openDirectoryPicker()}>
-            pagesを再選択
+            {t("open-btn-control")}
           </button>
         </div>
       </div>
       <div className='dir-not-selected' style={{ display: dirHandle === undefined ? 'block' : 'none' }}>
-        <div className='open-btn-label'>Logseqのグラフ保存先フォルダにあるpagesフォルダを選択してください。<br />
+        <div className='open-btn-label'>{t("open-btn-label")}<br />
           ({currentGraph.replace('logseq_local_', '')}/pages)
         </div>
         <button className='open-btn' onClick={() => openDirectoryPicker()}>
-          pagesを選択
+          {t("open-btn")}
         </button>
       </div>
       <div className='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>
-        ※日誌やホワイトボードは含まれません。本文のないページは表示されません。
+        {t("footer")}
       </div>
     </>
   )
