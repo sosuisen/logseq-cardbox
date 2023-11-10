@@ -17,6 +17,7 @@ type ParentBlocks =
 
 const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
+  if (!name) return '';
   return name
     .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
@@ -30,6 +31,7 @@ const encodeLogseqFileName = (name: string) => {
 };
 
 const decodeLogseqFileName = (name: string) => {
+  if (!name) return '';
   return name
     .replace(/%3C/g, '<')
     .replace(/%3E/g, '>')
@@ -87,10 +89,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const getSummary = (blocks: BlockEntity[]): string[] => {
+    const getSummary = (blocks: BlockEntity[]): [string[], string] => {
       const max = 100;
       let total = 0;
       const summary = [];
+      let image = '';
       const parentStack: ParentBlocks[] = [];
 
       if (blocks && blocks.length > 0) {
@@ -126,8 +129,44 @@ function App() {
             }
           }
         }
+
+        // Search embedded image
+        parentStack.splice(0, parentStack.length);
+        parentStack.push({
+          blocks,
+          index: 0,
+        });
+
+        while (parentStack.length > 0) {
+          let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
+          while (currentParent.index >= currentParent.blocks.length) {
+            parentStack.pop();
+            if (parentStack.length === 0) break;
+            currentParent = parentStack[parentStack.length - 1];
+          }
+          if (parentStack.length === 0) break;
+
+          const block = currentParent.blocks[currentParent.index++];
+
+          if (Object.prototype.hasOwnProperty.call(block, 'id')) {
+            const ma = (block as BlockEntity).content.match(/\(..\/assets\/(.+\.(png|jpg|jpeg))/);
+            if (ma) {
+              image = ma[1];
+              console.log("asset: " + ma[1]);
+              break;
+            }
+            //            summary.push(content);
+
+            if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
+              parentStack.push({
+                blocks: (block as BlockEntity).children!,
+                index: 0,
+              });
+            }
+          }
+        }
       }
-      return summary;
+      return [summary, image];
     };
 
     const onFileChanged = async (changes: {
@@ -187,13 +226,14 @@ function App() {
             }
 
             const blocks = await logseq.Editor.getPageBlocksTree(originalName);
-            const summary = getSummary(blocks);
+            const [summary, image] = getSummary(blocks);
 
             const box = await db.box.get(originalName);
             if (box) {
               db.box.update(originalName, {
                 time: updatedTime,
                 summary,
+                image,
               });
             }
             else {
@@ -205,6 +245,7 @@ function App() {
                   uuid: page.uuid,
                   time: updatedTime,
                   summary,
+                  image,
                 })
               }
             }
@@ -233,14 +274,16 @@ function App() {
           uuid: page.uuid,
           time: updatedTime,
           summary: [],
+          image: '',
         });
 
         // Load summary asynchronously
         logseq.Editor.getPageBlocksTree(page.uuid).then(blocks => {
-          const summary = getSummary(blocks);
+          const [summary, image] = getSummary(blocks);
 
           db.box.update(page.originalName, {
             summary,
+            image,
           });
         });
       }
@@ -442,8 +485,11 @@ function App() {
       <div className='box-title'>
         {box.name}
       </div>
-      <div className='box-summary'>
+      <div className='box-summary' style={{ display: box.image === '' ? 'block' : 'none' }}>
         {box.summary.map(item => (<>{item}<br /></>))}
+      </div>
+      <div className='box-image' style={{ display: box.image !== '' ? 'block' : 'none' }}>
+        <img src={currentGraph.replace('logseq_local_', '') + '/assets/' + box.image} style={{ width: '140px'}} alt='(image)' />
       </div>
       <div className='box-date' style={{ display: 'none' }}>
         {format(box.time, preferredDateFormat)} {getTimeString(box.time)}

@@ -5,6 +5,7 @@ export interface Box {
   uuid: string; // uuid in Logseq db  
   time: number; // Unix time
   summary: string[];
+  image: string;
 }
 
 export class CardBoxDexie extends Dexie {

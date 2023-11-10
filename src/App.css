@@ -105,6 +105,12 @@
   white-space: pre-wrap;
 }
 
+.box-image {
+  overflow: hidden;
+  padding-top: 7px;
+  display: none;
+}
+
 .box-date {
   font-size: 10px;
 }
