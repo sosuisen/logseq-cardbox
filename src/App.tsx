@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { format } from 'date-fns';
-import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
+import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
 import i18n from "i18next";
 import { db, Box } from './db';
@@ -8,6 +8,12 @@ import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
+
+type ParentBlocks =
+  {
+    blocks: (BlockEntity | BlockUUIDTuple)[];
+    index: number;
+  };
 
 const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
@@ -83,22 +89,40 @@ function App() {
       const max = 100;
       let total = 0;
       const summary = [];
-      if (blocks && blocks.length > 0) {
-        const content = blocks[0].content.substring(0, max);
-        total += content.length;
-        summary.push(content);
+      const parentStack: ParentBlocks[] = [];
 
-        if (blocks[0].children && blocks[0].children.length > 0) {
-          const block = blocks[0].children[0];
+      if (blocks && blocks.length > 0) {
+        parentStack.push({
+          blocks,
+          index: 0,
+        });
+
+        while (total < max) {
+          let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
+          while (currentParent.index >= currentParent.blocks.length) {
+            parentStack.pop();
+            if (parentStack.length === 0) break;
+            currentParent = parentStack[parentStack.length - 1];
+          }
+          if (parentStack.length === 0) break;
+
+          const block = currentParent.blocks[currentParent.index++];
+
           if (Object.prototype.hasOwnProperty.call(block, 'id')) {
-            const content = (block as BlockEntity).content.substring(0, max - total);
+            let content = (block as BlockEntity).content.substring(0, max);
+            if (parentStack.length > 1) {
+              content = '  '.repeat(parentStack.length - 1) + '* ' + content;
+            }
             total += content.length;
             summary.push(content);
+
+            if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
+              parentStack.push({
+                blocks: (block as BlockEntity).children!,
+                index: 0,
+              });
+            }
           }
-        }
-        else if (blocks.length > 1) {
-          const content = blocks[1].content.substring(0, max - total);
-          summary.push(content);
         }
       }
       return summary;
