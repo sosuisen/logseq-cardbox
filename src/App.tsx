@@ -67,6 +67,8 @@ function App() {
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
 
+  const [selectedBox, setSelectedBox] = useState<number>(0);
+
   const cardboxes = useLiveQuery(
     () => db.box
       .orderBy('time')
@@ -249,10 +251,67 @@ function App() {
       // setBoxes([]);
       fetchData();
 
+      const handleKeyDown = (e: { key: string; }) => {
+          const tile = document.getElementById('tile');
+          if (!tile?.hasChildNodes()) {
+            return;
+          }
+          const tileWidth = tile!.offsetWidth - 24 * 2; // padding is 24px
+          // const tileTop = tile!.offsetTop;
+          const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 * 2; // margin is 10px
+          // const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
+          // const boxTop = (tile!.children[0] as HTMLElement).offsetTop - tileTop - 10; // margin is 10px;
+          // console.log(tileWidth, boxWidth, boxHeight, Math.floor(tileWidth / boxWidth));
+          const cols = Math.floor(tileWidth / boxWidth);
+
+          if (e.key === 'ArrowUp') {
+            setSelectedBox(selectedBox => {
+              const newIndex = selectedBox - cols;
+              if (newIndex < 0) {
+                return selectedBox;
+              }
+              return newIndex;
+            });
+          }
+          else if (e.key === 'ArrowDown') {
+            setSelectedBox(selectedBox => {
+              const newIndex = selectedBox + cols;
+              if (newIndex >= tile!.childElementCount) {
+                return selectedBox;
+              }
+              return newIndex;
+            });
+          }
+          else if (e.key === 'ArrowRight') {
+            setSelectedBox(selectedBox => {
+              const newIndex = selectedBox + 1;
+              if (newIndex >= tile!.childElementCount) {
+                return selectedBox;
+              }
+              return newIndex;
+            });
+          }
+          else if (e.key === 'ArrowLeft') {
+            setSelectedBox(selectedBox => {
+              const newIndex = selectedBox - 1;
+              if (newIndex < 0) {
+                return selectedBox;
+              }
+              return newIndex;
+            });
+          }
+
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      
       // onChanged returns a function to unsubscribe.
       // Use 'return unsubscribe_function' to call unsubscribe_function
       // when component is unmounted, otherwise a lot of listeners will be left.
-      return logseq.DB.onChanged(onFileChanged);
+      const removeOnChanged = logseq.DB.onChanged(onFileChanged);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        removeOnChanged();
+      }
     }
   }, [dirHandle]);
 
@@ -278,13 +337,13 @@ function App() {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   };
 
-  const boxElements = cardboxes?.map((box: Box) => (
+  const boxElements = cardboxes?.map((box: Box, index) => (
     // Do not use uuid because pagebar is not shown properly.
     // <a href={`logseq://graph/${currentGraph}?page=${box.uuid}`}>
     // Calling deep link is very slow. Use pushState() instead.
     // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
 
-    <div className='box' onClick={e => boxOnClick(box, e)}>
+    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)}>
       <div className='box-title'>
         {box.name}
       </div>
@@ -329,7 +388,7 @@ function App() {
           {t("open-btn")}
         </button>
       </div>
-      <div className='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex' }}>
+      <div id='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>

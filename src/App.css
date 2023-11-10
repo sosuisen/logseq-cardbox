@@ -57,8 +57,7 @@
   margin-left: 5px;
 }
 
-.tile {
-  width: 100%;
+#tile {
   height: 92%;
   padding-left: 24px;
   padding-right: 24px;
@@ -78,10 +77,15 @@
   background-color: #ffffff;
   border-top: 5px solid #90c0ff;
   overflow-y: hidden;
+  box-sizing: border-box;
+}
+
+.selectedBox {
+  background-color: #f0f0ff;
 }
 
 .box:hover {
-  background-color: #f0f0f0;
+  background-color: #e0e0e0;
 }
 
 .box-title {
