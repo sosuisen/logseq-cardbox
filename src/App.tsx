@@ -182,7 +182,7 @@ function App() {
           originalName: page.originalName,
           updatedTime,
         };
-        console.log(box);
+        // console.log(box);
         setBoxes(boxes => [...boxes, box].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime))
       }
     };
