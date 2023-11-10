@@ -187,11 +187,25 @@ function App() {
             const blocks = await logseq.Editor.getPageBlocksTree(originalName);
             const summary = getSummary(blocks);
 
-            db.box.put({
-              name: originalName,
-              time: updatedTime,
-              summary,
-            })
+            const box = await db.box.get(originalName);
+            if (box) {
+              db.box.update(originalName, {
+                time: updatedTime,
+                summary,
+              });
+            }
+            else {
+              // create
+              const page = await logseq.Editor.getPage(originalName);
+              if (page) {
+                db.box.put({
+                  name: originalName,
+                  uuid: page.uuid,
+                  time: updatedTime,
+                  summary,
+                })
+              }
+            }
           }
           else if (operation === 'delete') {
             db.box.delete(originalName);
@@ -214,6 +228,7 @@ function App() {
 
         db.box.put({
           name: page.originalName,
+          uuid: page.uuid,
           time: updatedTime,
           summary: [],
         });
@@ -248,7 +263,7 @@ function App() {
 
   const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
     if (e.shiftKey) {
-      logseq.Editor.openInRightSidebar(box.name);
+      logseq.Editor.openInRightSidebar(box.uuid);
     }
     else {
       logseq.App.pushState('page', {

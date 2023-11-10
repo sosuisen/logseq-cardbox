@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 
 export interface Box {
   name: string; // originalName in Logseq db
+  uuid: string; // uuid in Logseq db  
   time: number; // Unix time
   summary: string[];
 }
