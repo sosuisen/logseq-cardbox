@@ -1,6 +1,6 @@
 {
     "open-btn-control": "Change pages",
-    "open-btn": "Select pages",
+    "open-btn": "Select pages folder",
     "open-btn-label": "Please select the pages folder in the Logseq graph storage folder." ,
     "footer": "Click to open (Shift+Click to open in sidebar). *Empty pages are not displayed.",
     "loading" : "Loading..."

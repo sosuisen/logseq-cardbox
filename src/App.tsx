@@ -256,65 +256,83 @@ function App() {
         if (!tile?.hasChildNodes()) {
           return;
         }
-        const tileWidth = tile!.offsetWidth - 24 * 2; // padding is 24px
-        // const tileTop = tile!.offsetTop;
-        const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 * 2; // margin is 10px
+        const tileWidth = tile!.clientWidth - 24 * 2; // padding is 24px. clientWidth does not include scrollbar width.
+        const tileHeight = tile!.offsetHeight;
+        const tileTop = tile!.offsetTop;
+        // margin-right is auto
+        // margin-left must not be auto to avoid the layout becoming too dense
+        const boxMarginRight = parseInt(window.getComputedStyle((tile!.children[0] as HTMLElement)).getPropertyValue('margin-right'));
+        const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 + boxMarginRight; // margin-left is 10px
         const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
-          // const boxTop = (tile!.children[0] as HTMLElement).offsetTop - tileTop - 10; // margin is 10px;
-          // console.log(tileWidth, boxWidth, boxHeight, Math.floor(tileWidth / boxWidth));
-          const cols = Math.floor(tileWidth / boxWidth);
 
-          if (e.key === 'ArrowUp') {
-            setSelectedBox(selectedBox => {
-              const newIndex = selectedBox - cols;
-              if (newIndex < 0) {
-                return selectedBox;
-              }
+        // console.log(tileWidth, boxWidth, boxHeight, Math.floor(tileWidth / boxWidth));
+        const cols = Math.floor(tileWidth / boxWidth);
+        const rows = Math.floor(tileHeight / boxHeight);
+        if (e.key === 'ArrowUp') {
+          setSelectedBox(selectedBox => {
+            const newIndex = selectedBox - cols;
+            if (newIndex < 0) {
+              return selectedBox;
+            }
+
+            const boxTop = (tile!.children[selectedBox] as HTMLElement).offsetTop - tileTop - 10 - tile.scrollTop; // margin is 10px;
+            if (Math.floor(boxTop / boxHeight) <= 1) {
               tile.scrollBy(0, -boxHeight);
-              return newIndex;
-            });
-          }
-          else if (e.key === 'ArrowDown') {
-            setSelectedBox(selectedBox => {
-              const newIndex = selectedBox + cols;
-              if (newIndex >= tile!.childElementCount) {
-                return selectedBox;
-              }
+            }
+            return newIndex;
+          });
+        }
+        else if (e.key === 'ArrowDown') {
+          setSelectedBox(selectedBox => {
+            const newIndex = selectedBox + cols;
+            if (newIndex >= tile!.childElementCount) {
+              return selectedBox;
+            }
+            const boxTop = (tile!.children[selectedBox] as HTMLElement).offsetTop - tileTop - 10 - tile.scrollTop; // margin is 10px;
+            if (Math.floor(boxTop / boxHeight) >= rows - 1) {
               tile.scrollBy(0, boxHeight);
-              return newIndex;
-            });
-          }
-          else if (e.key === 'ArrowRight') {
-            setSelectedBox(selectedBox => {
-              const newIndex = selectedBox + 1;
-              if (newIndex >= tile!.childElementCount) {
-                return selectedBox;
-              }
-              if (Math.floor(selectedBox/cols) !== Math.floor(newIndex/cols)) {
+            }            
+
+            return newIndex;
+          });
+        }
+        else if (e.key === 'ArrowRight') {
+          setSelectedBox(selectedBox => {
+            const newIndex = selectedBox + 1;
+            if (newIndex >= tile!.childElementCount) {
+              return selectedBox;
+            }
+            if (Math.floor(selectedBox / cols) !== Math.floor(newIndex / cols)) {
+              const boxTop = (tile!.children[selectedBox] as HTMLElement).offsetTop - tileTop - 10 - tile.scrollTop; // margin is 10px;
+              if (Math.floor(boxTop / boxHeight) >= rows - 1) {  
                 tile.scrollBy(0, boxHeight);
               }
-              return newIndex;
-            });
-          }
-          else if (e.key === 'ArrowLeft') {
-            setSelectedBox(selectedBox => {
-              const newIndex = selectedBox - 1;
-              if (newIndex < 0) {
-                return selectedBox;
-              }
-              if (Math.floor(selectedBox/cols) !== Math.floor(newIndex/cols)) {
+            }
+            return newIndex;
+          });
+        }
+        else if (e.key === 'ArrowLeft') {
+          setSelectedBox(selectedBox => {
+            const newIndex = selectedBox - 1;
+            if (newIndex < 0) {
+              return selectedBox;
+            }
+            if (Math.floor(selectedBox / cols) !== Math.floor(newIndex / cols)) {
+              const boxTop = (tile!.children[selectedBox] as HTMLElement).offsetTop - tileTop - 10 - tile.scrollTop; // margin is 10px;
+              if (Math.floor(boxTop / boxHeight) <= 1) {                
                 tile.scrollBy(0, -boxHeight);
               }
-              return newIndex;
-            });
-          }
-          else if (e.key === 'Enter') {
-            (document.getElementsByClassName('selectedBox')[0] as HTMLElement).click();
-          }
+            }
+            return newIndex;
+          });
+        }
+        else if (e.key === 'Enter') {
+          (document.getElementsByClassName('selectedBox')[0] as HTMLElement).click();
+        }
 
       };
       window.addEventListener('keydown', handleKeyDown);
-      
+
       // onChanged returns a function to unsubscribe.
       // Use 'return unsubscribe_function' to call unsubscribe_function
       // when component is unmounted, otherwise a lot of listeners will be left.

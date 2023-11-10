@@ -70,7 +70,7 @@
 .box {
   cursor: pointer;
   border-radius: 0px 0px 3px 3px;
-  margin: 10px;
+  margin: 10px auto 10px 10px;
   width: 140px;
   height: 140px;
   box-shadow: 2px 3px 0 0px #d0d0d0;
