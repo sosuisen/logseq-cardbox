@@ -37,6 +37,14 @@ function main() {
     const dbName = configs.currentGraph;
     setDB(dbName);
 
+    document.body.addEventListener('click', () => {
+      logseq.hideMainUI();
+    });
+
+    document.getElementById('app')!.addEventListener('click', e => {
+      e.stopPropagation();
+    });
+
     ReactDOM.createRoot(document.getElementById('app')!).render(
       <React.StrictMode>
         <App />
