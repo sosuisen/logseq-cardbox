@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "i18next";
 import { db, Box } from './db';
 import './App.css'
+import { useLiveQuery } from 'dexie-react-hooks';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
@@ -56,9 +57,16 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
 
 function App() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle>();
-  const [boxes, setBoxes] = useState<Box[]>([]);
   const [currentGraph, setCurrentGraph] = useState<string>('');
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const cardboxes = useLiveQuery(
+    () => db.box
+      .orderBy('time')
+      .reverse()
+      .toArray()
+  );
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -71,6 +79,31 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const getSummary = (blocks: BlockEntity[]): string[] => {
+      const max = 100;
+      let total = 0;
+      const summary = [];
+      if (blocks && blocks.length > 0) {
+        const content = blocks[0].content.substring(0, max);
+        total += content.length;
+        summary.push(content);
+
+        if (blocks[0].children && blocks[0].children.length > 0) {
+          const block = blocks[0].children[0];
+          if (Object.prototype.hasOwnProperty.call(block, 'id')) {
+            const content = (block as BlockEntity).content.substring(0, max - total);
+            total += content.length;
+            summary.push(content);
+          }
+        }
+        else if (blocks.length > 1) {
+          const content = blocks[1].content.substring(0, max - total);
+          summary.push(content);
+        }
+      }
+      return summary;
+    };
+
     const onFileChanged = async (changes: {
       blocks: BlockEntity[];
       txData: IDatom[];
@@ -114,10 +147,12 @@ function App() {
         const ma = path.match(/pages\/(.*)\.md/);
         if (ma) {
           const fileName = ma[1];
-          const originalName = decodeLogseqFileName(fileName);
+
           let updatedTime = 0;
+
           console.log(`${operation}, ${fileName}`);
 
+          const originalName = decodeLogseqFileName(fileName);
           if (operation === 'modified') {
             updatedTime = await getLastUpdatedTime(fileName, dirHandle!);
             if (updatedTime === 0) {
@@ -125,26 +160,17 @@ function App() {
               return;
             }
 
-            const box: Box = {
+            const blocks = await logseq.Editor.getPageBlocksTree(originalName);
+            const summary = getSummary(blocks);
+
+            db.box.put({
               name: originalName,
               time: updatedTime,
-              summary: '',
-            };
-
-            setBoxes(boxes => {
-              const target = boxes.find(box => box.name === originalName ? true : false);
-              if (target) {
-                target.time = updatedTime;
-                return [...boxes].sort((a, b) => b.time - a.time);
-              }
-              else {
-                console.log('Not found in boxes. Create: ' + originalName);
-                return [box, ...boxes];
-              }
-            });
+              summary,
+            })
           }
           else if (operation === 'delete') {
-            setBoxes(boxes => [...boxes.filter(box => box.name !== originalName)])
+            db.box.delete(originalName);
           }
           else {
             console.log('Unknown operation: ' + operation);
@@ -162,24 +188,26 @@ function App() {
         const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), dirHandle!);
         if (updatedTime === 0) continue;
 
-        const box: Box = {
-          name: page.originalName,
-          time: updatedTime,
-          summary: '',
-        };
-        // console.log(box);
-        setBoxes(boxes => [...boxes, box].sort((a, b) => b.time - a.time));
-
         db.box.put({
           name: page.originalName,
           time: updatedTime,
-          summary: '',
-        })
+          summary: [],
+        });
+
+        // Load summary asynchronously
+        logseq.Editor.getPageBlocksTree(page.uuid).then(blocks => {
+          const summary = getSummary(blocks);
+
+          db.box.update(page.originalName, {
+            summary,
+          });
+        });
       }
+      setLoading(false);
     };
 
     if (dirHandle) {
-      setBoxes([]);
+      // setBoxes([]);
       fetchData();
 
       // onChanged returns a function to unsubscribe.
@@ -211,7 +239,7 @@ function App() {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   };
 
-  const boxElements = boxes.map((box: Box) => (
+  const boxElements = cardboxes?.map((box: Box) => (
     // Do not use uuid because pagebar is not shown properly.
     // <a href={`logseq://graph/${currentGraph}?page=${box.uuid}`}>
     // Calling deep link is very slow. Use pushState() instead.
@@ -221,10 +249,13 @@ function App() {
       <div className='box-title'>
         {box.name}
       </div>
-      <div className='box-date'>
-        {format(box.time, preferredDateFormat)}<br />
-        {getTimeString(box.time)}
+      <div className='box-summary'>
+        {box.summary.map(item => (<>{item}<br /></>))}
       </div>
+      <div className='box-date' style={{ display: 'none' }}>
+        {format(box.time, preferredDateFormat)} {getTimeString(box.time)}
+      </div>
+
     </div>
   ));
 
@@ -232,7 +263,11 @@ function App() {
   return (
     <>
       <div className='control'>
-        <div className='control-left'></div>
+        <div className='control-left'>
+          <div className='loading' style={{ display: loading && dirHandle != undefined ? 'block' : 'none' }}>
+            {t("loading")}
+          </div>
+        </div>
         <div className='control-center'>
           <div className='cardbox-title'>CardBox</div>
         </div>

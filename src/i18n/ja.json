@@ -2,5 +2,6 @@
     "open-btn-control": "pagesを変更",
     "open-btn": "pagesを選択",
     "open-btn-label": "Logseqのグラフ保存先フォルダにあるpagesフォルダを選択してください。",
-    "footer": "※日誌やホワイトボードは含まれません。本文のないページは表示されません。"
+    "footer": "※日誌やホワイトボードは含まれません。本文のないページは表示されません。",
+    "loading": "読み込み中..."
 }
