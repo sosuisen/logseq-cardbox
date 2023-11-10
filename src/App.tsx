@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns';
-import './App.css'
 import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
+import './App.css'
 
 type UpdatedTime = {
   formattedDate: string;
@@ -32,20 +32,19 @@ const getLastUpdatedTime = async (originalName: string, preferredDateFormat: str
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
   const path = `${fileName}.md`;
-  // console.log(path);
+
   const fileHandle = await handle.getFileHandle(path).catch(() => {
-    // Empty page is not saved as a file.
+    // Logseq does not save an empty page as a local file.
     console.log(`Failed to get file handle: ${path}`);
     return null;
   });
+
   if (!fileHandle) return '';
+
   const file = await fileHandle.getFile();
-
-  // console.log(file.lastModified);
   const date = new Date(file.lastModified);
-
   const dateUserFormat = format(date, preferredDateFormat);
-  // console.log(dateUserFormat);
+
   return {
     formattedDate: dateUserFormat,
     time: `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`,
