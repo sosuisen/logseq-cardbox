@@ -53,6 +53,7 @@
   display: flex;
   flex-wrap: wrap;
   overflow-y: auto;
+  align-content: flex-start;
 }
 
 .box {
