@@ -252,14 +252,14 @@ function App() {
       fetchData();
 
       const handleKeyDown = (e: { key: string; }) => {
-          const tile = document.getElementById('tile');
-          if (!tile?.hasChildNodes()) {
-            return;
-          }
-          const tileWidth = tile!.offsetWidth - 24 * 2; // padding is 24px
-          // const tileTop = tile!.offsetTop;
-          const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 * 2; // margin is 10px
-          // const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
+        const tile = document.getElementById('tile');
+        if (!tile?.hasChildNodes()) {
+          return;
+        }
+        const tileWidth = tile!.offsetWidth - 24 * 2; // padding is 24px
+        // const tileTop = tile!.offsetTop;
+        const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 * 2; // margin is 10px
+        // const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
           // const boxTop = (tile!.children[0] as HTMLElement).offsetTop - tileTop - 10; // margin is 10px;
           // console.log(tileWidth, boxWidth, boxHeight, Math.floor(tileWidth / boxWidth));
           const cols = Math.floor(tileWidth / boxWidth);
@@ -299,6 +299,9 @@ function App() {
               }
               return newIndex;
             });
+          }
+          else if (e.key === 'Enter') {
+            (document.getElementsByClassName('selectedBox')[0] as HTMLElement).click();
           }
 
       };
