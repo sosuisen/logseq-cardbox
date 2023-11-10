@@ -148,9 +148,6 @@ function App() {
           }
           setBoxes(boxes => [...boxes].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime));
         }
-        /*else if (operation === 'create') {
-          setBoxes(boxes => [box, ...boxes]);
-        }*/
         else if (operation === 'delete') {
           setBoxes(boxes => [...boxes.filter(box => box.originalName !== originalName)])
         }
