@@ -4,7 +4,6 @@ import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import './App.css'
 
 type UpdatedTime = {
-  formattedDate: string;
   time: string;
   unixTime: number;
 };
@@ -17,7 +16,6 @@ type Box = {
 type Operation = 'create' | 'modified' | 'delete' | '';
 
 const DEFAULT_UPDATED_TIME: UpdatedTime = {
-  formattedDate: '',
   time: '',
   unixTime: 0,
 };
@@ -49,7 +47,7 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%2A/g, '*');
 };
 
-const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle): Promise<UpdatedTime> => {
+const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle): Promise<UpdatedTime> => {
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
   const path = `${fileName}.md`;
@@ -64,10 +62,8 @@ const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string,
 
   const file = await fileHandle.getFile();
   const date = new Date(file.lastModified);
-  const dateUserFormat = format(date, preferredDateFormat);
 
   return {
-    formattedDate: dateUserFormat,
     time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`,
     unixTime: date.getTime(),
   };
@@ -76,12 +72,19 @@ const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string,
 function App() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle>();
   const [boxes, setBoxes] = useState<Box[]>([]);
-  const [currentGraph, setCurrentGraph] = useState<string>('');
+  const [currentGraph, setCurrentGraph] = useState<string>(''); 
+  const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
+  const [preferredLanguage, setPreferredLanguage] = useState<string>('');
+  
+  console.log(preferredLanguage);
+
 
   useEffect(() => {
     const getUserConfigs = async () => {
-      const { currentGraph } = await logseq.App.getUserConfigs();
+      const { currentGraph, preferredDateFormat, preferredLanguage } = await logseq.App.getUserConfigs();
       setCurrentGraph(currentGraph);
+      setPreferredDateFormat(preferredDateFormat);
+      setPreferredLanguage(preferredLanguage);
     };
     getUserConfigs();
   }, []);
@@ -96,8 +99,6 @@ function App() {
         [key: string]: any;
       };
     }) => {
-      const { preferredDateFormat } = await logseq.App.getUserConfigs();
-
       let operation: Operation = '';
       let path = '';
       for (const block of changes.blocks) {
@@ -137,7 +138,7 @@ function App() {
           console.log(`${operation}, ${fileName}`);
 
           if (operation === 'modified') {
-            updatedTime = await getLastUpdatedTime(fileName, preferredDateFormat, dirHandle!);
+            updatedTime = await getLastUpdatedTime(fileName, dirHandle!);
             if (updatedTime === DEFAULT_UPDATED_TIME) {
               console.log('Failed to get updated time.');
               return;
@@ -171,16 +172,12 @@ function App() {
     };
 
     const fetchData = async () => {
-      const { preferredDateFormat } = await logseq.App.getUserConfigs();
-      // const arr = currentGraph.split('/');
-      // setCurrentGraph(arr[arr.length - 1]);
-
       const pages = await logseq.Editor.getAllPages();
       if (!pages) return [];
       for (const page of pages) {
         if (page['journal?']) continue;
 
-        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), preferredDateFormat, dirHandle!);
+        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), dirHandle!);
         if (updatedTime === DEFAULT_UPDATED_TIME) continue;
 
         const box = {
@@ -223,14 +220,15 @@ function App() {
   const boxElements = boxes.map((box: Box) => (
     // Do not use uuid because pagebar is not shown properly.
     // <a href={`logseq://graph/${currentGraph}?page=${box.uuid}`}>
-    // deeplink is very slow. Use pushState() instead.
+    // Calling deep link is very slow. Use pushState() instead.
     // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
+
     <div className='box' onClick={e => boxOnClick(box, e)}>
       <div className='box-title'>
         {box.originalName}
       </div>
       <div className='box-date'>
-        {box.updatedTime.formattedDate}<br />
+        {format(box.updatedTime.unixTime, preferredDateFormat)}<br />
         {box.updatedTime.time}
       </div>
     </div>
