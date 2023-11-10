@@ -98,7 +98,7 @@
   overflow: hidden;
   text-align: left;
   padding: 7px;
-  white-space: pre;
+  white-space: pre-wrap;
 }
 
 .box-date {
