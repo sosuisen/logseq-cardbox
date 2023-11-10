@@ -16,6 +16,12 @@ type Box = {
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
+const DEFAULT_UPDATED_TIME: UpdatedTime = {
+  formattedDate: '',
+  time: '',
+  unixTime: 0,
+};
+
 const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
   return name
@@ -43,7 +49,7 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%2A/g, '*');
 };
 
-const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle) => {
+const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string, handle: FileSystemDirectoryHandle): Promise<UpdatedTime> => {
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
   const path = `${fileName}.md`;
@@ -54,7 +60,7 @@ const getLastUpdatedTime = async (fileName: string, preferredDateFormat: string,
     return null;
   });
 
-  if (!fileHandle) return '';
+  if (!fileHandle) return DEFAULT_UPDATED_TIME;
 
   const file = await fileHandle.getFile();
   const date = new Date(file.lastModified);
@@ -117,36 +123,33 @@ function App() {
       const ma = path.match(/pages\/(.*)\.md/);
       if (ma) {
         const fileName = ma[1];
-
-        let updatedTime: UpdatedTime | '' = {
-          formattedDate: '',
-          time: '',
-          unixTime: 0,
-        };
+        const originalName = decodeLogseqFileName(fileName);
+        let updatedTime: UpdatedTime = DEFAULT_UPDATED_TIME;
+        console.log(`${operation}, ${fileName}`);
 
         if (operation === 'modified') {
           updatedTime = await getLastUpdatedTime(fileName, preferredDateFormat, dirHandle!);
-          if (updatedTime === '') {
+          if (updatedTime === DEFAULT_UPDATED_TIME) {
             console.log('Failed to get updated time.');
             return;
           }
-        }
-        console.log(`${operation}, ${fileName}`);
 
-        const originalName = decodeLogseqFileName(fileName);
-        const box: Box = {
-          originalName,
-          updatedTime,
-        };
+          const box: Box = {
+            originalName,
+            updatedTime,
+          };
 
-        if (operation === 'modified') {
-          const target = boxes.find(box => box.originalName === originalName ? true : false);
-          if (target) target.updatedTime = updatedTime;
-          else {
-            console.log('Not found in boxes. Create: ' + originalName);
-            setBoxes(boxes => [box, ...boxes]);
-          }
-          setBoxes(boxes => [...boxes].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime));
+          setBoxes(boxes => {
+            const target = boxes.find(box => box.originalName === originalName ? true : false);
+            if (target) {
+              target.updatedTime = updatedTime;
+              return [...boxes].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime);
+            }
+            else {
+              console.log('Not found in boxes. Create: ' + originalName);
+              return [box, ...boxes];
+            }
+          });
         }
         else if (operation === 'delete') {
           setBoxes(boxes => [...boxes.filter(box => box.originalName !== originalName)])
@@ -157,7 +160,7 @@ function App() {
       }
     }
     // console.log(changes);
-  }, [boxes, dirHandle]);
+  }, [dirHandle]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -179,7 +182,7 @@ function App() {
         if (page['journal?']) continue;
 
         const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), preferredDateFormat, dirHandle!);
-        if (updatedTime === '') continue;
+        if (updatedTime === DEFAULT_UPDATED_TIME) continue;
 
         const box = {
           originalName: page.originalName,
