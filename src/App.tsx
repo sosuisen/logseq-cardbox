@@ -259,7 +259,7 @@ function App() {
         const tileWidth = tile!.offsetWidth - 24 * 2; // padding is 24px
         // const tileTop = tile!.offsetTop;
         const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 * 2; // margin is 10px
-        // const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
+        const boxHeight = (tile!.children[0] as HTMLElement).offsetHeight + 10 * 2; // margin is 10px
           // const boxTop = (tile!.children[0] as HTMLElement).offsetTop - tileTop - 10; // margin is 10px;
           // console.log(tileWidth, boxWidth, boxHeight, Math.floor(tileWidth / boxWidth));
           const cols = Math.floor(tileWidth / boxWidth);
@@ -270,6 +270,7 @@ function App() {
               if (newIndex < 0) {
                 return selectedBox;
               }
+              tile.scrollBy(0, -boxHeight);
               return newIndex;
             });
           }
@@ -279,6 +280,7 @@ function App() {
               if (newIndex >= tile!.childElementCount) {
                 return selectedBox;
               }
+              tile.scrollBy(0, boxHeight);
               return newIndex;
             });
           }
@@ -288,6 +290,9 @@ function App() {
               if (newIndex >= tile!.childElementCount) {
                 return selectedBox;
               }
+              if (Math.floor(selectedBox/cols) !== Math.floor(newIndex/cols)) {
+                tile.scrollBy(0, boxHeight);
+              }
               return newIndex;
             });
           }
@@ -296,6 +301,9 @@ function App() {
               const newIndex = selectedBox - 1;
               if (newIndex < 0) {
                 return selectedBox;
+              }
+              if (Math.floor(selectedBox/cols) !== Math.floor(newIndex/cols)) {
+                tile.scrollBy(0, -boxHeight);
               }
               return newIndex;
             });
