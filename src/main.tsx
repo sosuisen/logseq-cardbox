@@ -3,7 +3,8 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import '@logseq/libs'
-import "./i18n/configs";
+import './i18n/configs';
+import { setDB } from './db';
 
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter
@@ -32,11 +33,16 @@ function main() {
     `,
   });
 
-  ReactDOM.createRoot(document.getElementById('app')!).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  )
+  logseq.App.getUserConfigs().then((configs) => {
+    const dbName = configs.currentGraph;
+    setDB(dbName);
+
+    ReactDOM.createRoot(document.getElementById('app')!).render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+  });
 }
 
 // bootstrap

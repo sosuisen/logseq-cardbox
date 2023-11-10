@@ -3,24 +3,10 @@ import { format } from 'date-fns';
 import { BlockEntity, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
 import i18n from "i18next";
+import { db, Box } from './db';
 import './App.css'
 
-type UpdatedTime = {
-  time: string;
-  unixTime: number;
-};
-
-type Box = {
-  originalName: string;
-  updatedTime: UpdatedTime;
-};
-
 type Operation = 'create' | 'modified' | 'delete' | '';
-
-const DEFAULT_UPDATED_TIME: UpdatedTime = {
-  time: '',
-  unixTime: 0,
-};
 
 const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
@@ -49,7 +35,7 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%2A/g, '*');
 };
 
-const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle): Promise<UpdatedTime> => {
+const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle): Promise<number> => {
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
   const path = `${fileName}.md`;
@@ -60,15 +46,12 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
     return null;
   });
 
-  if (!fileHandle) return DEFAULT_UPDATED_TIME;
+  if (!fileHandle) return 0;
 
   const file = await fileHandle.getFile();
   const date = new Date(file.lastModified);
 
-  return {
-    time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`,
-    unixTime: date.getTime(),
-  };
+  return date.getTime();
 };
 
 function App() {
@@ -132,26 +115,27 @@ function App() {
         if (ma) {
           const fileName = ma[1];
           const originalName = decodeLogseqFileName(fileName);
-          let updatedTime: UpdatedTime = DEFAULT_UPDATED_TIME;
+          let updatedTime = 0;
           console.log(`${operation}, ${fileName}`);
 
           if (operation === 'modified') {
             updatedTime = await getLastUpdatedTime(fileName, dirHandle!);
-            if (updatedTime === DEFAULT_UPDATED_TIME) {
+            if (updatedTime === 0) {
               console.log('Failed to get updated time.');
               return;
             }
 
             const box: Box = {
-              originalName,
-              updatedTime,
+              name: originalName,
+              time: updatedTime,
+              summary: '',
             };
 
             setBoxes(boxes => {
-              const target = boxes.find(box => box.originalName === originalName ? true : false);
+              const target = boxes.find(box => box.name === originalName ? true : false);
               if (target) {
-                target.updatedTime = updatedTime;
-                return [...boxes].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime);
+                target.time = updatedTime;
+                return [...boxes].sort((a, b) => b.time - a.time);
               }
               else {
                 console.log('Not found in boxes. Create: ' + originalName);
@@ -160,7 +144,7 @@ function App() {
             });
           }
           else if (operation === 'delete') {
-            setBoxes(boxes => [...boxes.filter(box => box.originalName !== originalName)])
+            setBoxes(boxes => [...boxes.filter(box => box.name !== originalName)])
           }
           else {
             console.log('Unknown operation: ' + operation);
@@ -176,14 +160,21 @@ function App() {
         if (page['journal?']) continue;
 
         const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), dirHandle!);
-        if (updatedTime === DEFAULT_UPDATED_TIME) continue;
+        if (updatedTime === 0) continue;
 
-        const box = {
-          originalName: page.originalName,
-          updatedTime,
+        const box: Box = {
+          name: page.originalName,
+          time: updatedTime,
+          summary: '',
         };
         // console.log(box);
-        setBoxes(boxes => [...boxes, box].sort((a, b) => b.updatedTime.unixTime - a.updatedTime.unixTime))
+        setBoxes(boxes => [...boxes, box].sort((a, b) => b.time - a.time));
+
+        db.box.put({
+          name: page.originalName,
+          time: updatedTime,
+          summary: '',
+        })
       }
     };
 
@@ -205,14 +196,19 @@ function App() {
 
   const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
     if (e.shiftKey) {
-      logseq.Editor.openInRightSidebar(box.originalName);
+      logseq.Editor.openInRightSidebar(box.name);
     }
     else {
       logseq.App.pushState('page', {
-        name: box.originalName,
+        name: box.name,
       });
     }
     logseq.hideMainUI();
+  };
+
+  const getTimeString = (unixTime: number) => {
+    const date = new Date(unixTime);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
   };
 
   const boxElements = boxes.map((box: Box) => (
@@ -223,11 +219,11 @@ function App() {
 
     <div className='box' onClick={e => boxOnClick(box, e)}>
       <div className='box-title'>
-        {box.originalName}
+        {box.name}
       </div>
       <div className='box-date'>
-        {format(box.updatedTime.unixTime, preferredDateFormat)}<br />
-        {box.updatedTime.time}
+        {format(box.time, preferredDateFormat)}<br />
+        {getTimeString(box.time)}
       </div>
     </div>
   ));
