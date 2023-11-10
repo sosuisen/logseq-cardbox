@@ -54,9 +54,8 @@ const getLastUpdatedTime = async (originalName: string, preferredDateFormat: str
 
 function App() {
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle>();
-
   const [boxes, setBoxes] = useState<Box[]>([]);
-  // const [currentGraph, setCurrentGraph] = useState<string>('');
+  const [currentGraph, setCurrentGraph] = useState<string>('');
 
   const onFileChanged = useCallback(async (changes: {
     blocks: BlockEntity[];
@@ -148,6 +147,14 @@ function App() {
   }, [boxes, dirHandle]);
 
   useEffect(() => {
+    const getUserConfigs = async () => {
+      const { currentGraph } = await logseq.App.getUserConfigs();
+      setCurrentGraph(currentGraph);
+    };
+    getUserConfigs();
+  }, []);
+
+  useEffect(() => {
     const fetchData = async () => {
       const { preferredDateFormat } = await logseq.App.getUserConfigs();
       // const arr = currentGraph.split('/');
@@ -235,7 +242,9 @@ function App() {
         </div>
       </div>
       <div className='dir-not-selected' style={{ display: dirHandle === undefined ? 'block' : 'none' }}>
-        <div className='open-btn-label'>Logseqのグラフの保存先フォルダにあるpagesフォルダを選択してください。</div>
+        <div className='open-btn-label'>Logseqのグラフ保存先フォルダにあるpagesフォルダを選択してください。<br />
+          ({currentGraph.replace('logseq_local_', '')}/pages)
+        </div>
         <button className='open-btn' onClick={() => openDirectoryPicker()}>
           pagesを選択
         </button>
@@ -244,7 +253,7 @@ function App() {
         {boxElements}
       </div>
       <div className='footer'>
-        ※日誌やホワイトボードは含まれません。タイトルのみのページは表示されません。
+        ※日誌やホワイトボードは含まれません。本文のないページは表示されません。
       </div>
     </>
   )
