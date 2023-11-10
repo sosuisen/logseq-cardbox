@@ -6,6 +6,8 @@
   margin-left: 2%;
   position: absolute;
   background-color: #dcdde0;
+  box-shadow: 5px 5px 0 0 #c0c0c0;
+  border-radius: 3px;
 }
 
 .control {
@@ -60,9 +62,9 @@
   cursor: pointer;
   border-radius: 0px 0px 3px 3px;
   margin: 10px;
-  width: 120px;
-  height: 90px;
-  box-shadow: 1px 2px 0 0px #d0d0d0;
+  width: 140px;
+  height: 110px;
+  box-shadow: 2px 3px 0 0px #d0d0d0;
   background-color: #ffffff;
   border-top: 5px solid #90c0ff;
 }
