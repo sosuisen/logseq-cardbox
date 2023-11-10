@@ -33,6 +33,25 @@ function main() {
     `,
   });
 
+  const cardboxDiv = document.createElement('div');
+  cardboxDiv.innerHTML = `
+      <a class="item group flex items-center text-sm font-medium rounded-md">
+          <span class="ui__icon ti ls-icon-calendar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar" height="24" viewBox="0 -960 960 960" width="24"><path d="M120-520v-320h320v320H120Zm0 400v-320h320v320H120Zm400-400v-320h320v320H520Zm0 400v-320h320v320H520ZM200-600h160v-160H200v160Zm400 0h160v-160H600v160Zm0 400h160v-160H600v160Zm-400 0h160v-160H200v160Zm400-400Zm0 240Zm-240 0Zm0-240Z"/></svg>
+          </span>
+          <span class="flex-1">CardBox</span>
+      </a>
+  `;
+  cardboxDiv.className = `cardbox-nav`;
+  cardboxDiv.addEventListener('click', () => { logseq.showMainUI(); });
+
+  const navHeader = window.parent.document.querySelector('.nav-header');
+  const cardboxNav = navHeader!.querySelector(`.cardbox-nav`);
+  if (cardboxNav) {
+    navHeader!.removeChild(cardboxNav);
+  }
+  navHeader!.insertBefore(cardboxDiv, navHeader!.lastChild);
+
   logseq.App.getUserConfigs().then((configs) => {
     const dbName = configs.currentGraph;
     setDB(dbName);
