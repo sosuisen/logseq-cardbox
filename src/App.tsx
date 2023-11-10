@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { CSSProperties, useEffect, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
@@ -348,9 +348,11 @@ function App() {
       if (!tile?.hasChildNodes()) {
         return;
       }
-      for(let i=0; i< tile!.children.length; i++) {
+      for (let i = 0; i < tile!.children.length; i++) {
         const elm = tile!.children[i] as HTMLDivElement;
-        elm.setAttribute('style', `margin-right: ${getMarginRight(i)};`);
+        const style = getBoxStyle(i);
+        elm.style.marginRight = style.marginRight as string;
+        elm.style.float = style.float as string;
       }
     };
     window.addEventListener('resize', handleResize);
@@ -366,23 +368,51 @@ function App() {
     setDirHandle(handle);
   };
 
-  const getMarginRight = (index: number): string => {
+  const getBoxStyle = (index: number): CSSProperties => {
     const tile = document.getElementById('tile');
     if (!tile?.hasChildNodes()) {
-      return 'auto';
+      return {
+        marginRight: 'auto',
+        float: 'none',
+      };
     }
     const tileWidth = tile!.clientWidth - 24 * 2; // padding is 24px. clientWidth does not include scrollbar width.
     const boxMarginRight = parseInt(window.getComputedStyle((tile!.children[0] as HTMLElement)).getPropertyValue('margin-right'));
     const boxWidth = (tile!.children[0] as HTMLElement).offsetWidth + 10 + boxMarginRight; // margin-left is 10px
 
     const cols = Math.floor(tileWidth / boxWidth);
-    if (index >= tile!.childElementCount - tile!.childElementCount % cols)
+
+    if (tile.style.display !== 'none') {
+      tile.style.display = 'flex';
+    }
+
+    const idealCols = Math.floor(tileWidth / ((tile!.children[0] as HTMLElement).offsetWidth + 10 * 2));
+
+    if (tile!.childElementCount <= idealCols) {
+      // Because margin-right is auto, boxes in the first line are heavily spaced
+      // when the total number of boxes is less than the number of columns.
+      // Unset 'flex' to avoid this.
+      if (tile.style.display !== 'none') {
+        tile.style.display = 'block';
+      }
+      return {
+        marginRight: '10px',
+        float: 'left',
+      };
+    }
+    else if (index >= tile!.childElementCount - tile!.childElementCount % cols)
       // This box is in last row
       // Because margin-right is auto, boxes in the last line are heavily spaced.
       // So, change to the same spacing as the other rows.
-      return boxMarginRight + 'px';
+      return {
+        marginRight: boxMarginRight + 'px',
+        float: 'none',
+      };
 
-    return 'auto';
+    return {
+      marginRight: 'auto',
+      float: 'none',
+    };
   }
 
   const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
@@ -408,7 +438,7 @@ function App() {
     // Calling deep link is very slow. Use pushState() instead.
     // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
 
-    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} style={{ marginRight: getMarginRight(index) }}>
+    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} style={getBoxStyle(index)}>
       <div className='box-title'>
         {box.name}
       </div>
