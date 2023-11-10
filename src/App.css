@@ -52,6 +52,8 @@
 .tile {
   width: 100%;
   height: 90%;
+  padding-left: 24px;
+  padding-right: 24px;
   display: flex;
   flex-wrap: wrap;
   overflow-y: auto;
