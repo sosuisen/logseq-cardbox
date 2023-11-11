@@ -310,7 +310,7 @@ function App() {
   }, [dirHandle]);
 
   useEffect(() => {
-    const handleKeyDown = (e: { key: string; }) => {
+    const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
       const tile = document.getElementById('tile');
       if (!tile?.hasChildNodes()) {
         return;
@@ -385,7 +385,16 @@ function App() {
         });
       }
       else if (e.key === 'Enter') {
-        (document.getElementsByClassName('selectedBox')[0] as HTMLElement).click();
+        const box = (document.getElementsByClassName('selectedBox')[0] as HTMLElement);
+        if (e.shiftKey) {
+          logseq.Editor.openInRightSidebar(box.id);
+        }
+        else {
+          logseq.App.pushState('page', {
+            name: box.getElementsByClassName('box-title')[0].innerHTML,
+          });
+        }
+        logseq.hideMainUI();        
       }
 
     };
@@ -486,7 +495,7 @@ function App() {
     // Calling deep link is very slow. Use pushState() instead.
     // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
 
-    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} style={getBoxStyle(index)}>
+    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} style={getBoxStyle(index)} id={box.uuid}>
       <div className='box-title'>
         {box.name}
       </div>
