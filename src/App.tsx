@@ -68,6 +68,7 @@ function App() {
   const [currentGraph, setCurrentGraph] = useState<string>('');
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadedCardCount, setLoadedCardCount] = useState<number>(0);
 
   const [selectedBox, setSelectedBox] = useState<number>(0);
 
@@ -263,7 +264,9 @@ function App() {
     const fetchData = async () => {
       const pages = await logseq.Editor.getAllPages();
       if (!pages) return [];
+      let counter = 1;
       for (const page of pages) {
+
         if (page['journal?']) continue;
 
         const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), dirHandle!);
@@ -286,6 +289,8 @@ function App() {
             image,
           });
         });
+
+        setLoadedCardCount(counter++);
       }
       setLoading(false);
     };
@@ -489,7 +494,7 @@ function App() {
         {box.summary.map(item => (<>{item}<br /></>))}
       </div>
       <div className='box-image' style={{ display: box.image !== '' ? 'block' : 'none' }}>
-        <img src={currentGraph.replace('logseq_local_', '') + '/assets/' + box.image} style={{ width: '140px'}} alt='(image)' />
+        <img src={currentGraph.replace('logseq_local_', '') + '/assets/' + box.image} style={{ width: '140px' }} alt='(image)' />
       </div>
       <div className='box-date' style={{ display: 'none' }}>
         {format(box.time, preferredDateFormat)} {getTimeString(box.time)}
@@ -505,6 +510,9 @@ function App() {
         <div className='control-left'>
           <div className='loading' style={{ display: loading && dirHandle != undefined ? 'block' : 'none' }}>
             {t("loading")}
+          </div>
+          <div className='card-number'>
+            {cardboxes?.length !== loadedCardCount ? loadedCardCount : cardboxes?.length ?? 0} cards
           </div>
         </div>
         <div className='control-center'>
