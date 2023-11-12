@@ -472,8 +472,8 @@ function App() {
     const tile = document.getElementById('tile');
     if (!tile?.hasChildNodes()) {
       return {
-        marginRight: 'auto',
-        float: 'none',
+        marginRight: '10px',
+        float: 'left',
       };
     }
     const tileWidth = tile!.clientWidth - 24 * 2; // padding is 24px. clientWidth does not include scrollbar width.
@@ -487,6 +487,8 @@ function App() {
     }
 
     const idealCols = Math.floor(tileWidth / ((tile!.children[0] as HTMLElement).offsetWidth + 10 * 2));
+
+    console.log(idealCols + ',' + tile!.childElementCount);
 
     if (tile!.childElementCount <= idealCols) {
       // Because margin-right is auto, boxes in the first line are heavily spaced
