@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useState } from 'react'
+import { CSSProperties, useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
@@ -63,6 +63,87 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
   return date.getTime();
 };
 
+const getSummary = (blocks: BlockEntity[]): [string[], string] => {
+  const max = 100;
+  let total = 0;
+  const summary = [];
+  let image = '';
+  const parentStack: ParentBlocks[] = [];
+
+  if (blocks && blocks.length > 0) {
+    parentStack.push({
+      blocks,
+      index: 0,
+    });
+
+    while (total < max) {
+      let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
+      while (currentParent.index >= currentParent.blocks.length) {
+        parentStack.pop();
+        if (parentStack.length === 0) break;
+        currentParent = parentStack[parentStack.length - 1];
+      }
+      if (parentStack.length === 0) break;
+
+      const block = currentParent.blocks[currentParent.index++];
+
+      if (Object.prototype.hasOwnProperty.call(block, 'id')) {
+        let content = (block as BlockEntity).content.substring(0, max);
+        if (parentStack.length > 1) {
+          content = '  '.repeat(parentStack.length - 1) + '* ' + content;
+        }
+        total += content.length;
+        summary.push(content);
+
+        if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
+          parentStack.push({
+            blocks: (block as BlockEntity).children!,
+            index: 0,
+          });
+        }
+      }
+    }
+
+    // Search embedded image
+    parentStack.splice(0, parentStack.length);
+    parentStack.push({
+      blocks,
+      index: 0,
+    });
+
+    while (parentStack.length > 0) {
+      let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
+      while (currentParent.index >= currentParent.blocks.length) {
+        parentStack.pop();
+        if (parentStack.length === 0) break;
+        currentParent = parentStack[parentStack.length - 1];
+      }
+      if (parentStack.length === 0) break;
+
+      const block = currentParent.blocks[currentParent.index++];
+
+      if (Object.prototype.hasOwnProperty.call(block, 'id')) {
+        const ma = (block as BlockEntity).content.match(/\(..\/assets\/(.+\.(png|jpg|jpeg))/);
+        if (ma) {
+          image = ma[1];
+          console.log("asset: " + ma[1]);
+          break;
+        }
+        //            summary.push(content);
+
+        if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
+          parentStack.push({
+            blocks: (block as BlockEntity).children!,
+            index: 0,
+          });
+        }
+      }
+    }
+  }
+  return [summary, image];
+};
+
+
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
 let stopLoading = false;
@@ -84,6 +165,53 @@ function App() {
       .toArray()
     , [currentGraph]);
 
+
+  const fetchData = useCallback(async () => {
+    setLoadedCardCount(0);
+    setLoading(true);
+
+    const pages = await logseq.Editor.getAllPages();
+    if (!pages) return [];
+    let counter = 1;
+
+    stopLoading = false;
+    console.time('fetchData');
+    for (const page of pages) {
+      if (stopLoading) {
+        setLoadedCardCount(0);
+        break;
+      }
+      if (page['journal?']) continue;
+
+      const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
+      if (updatedTime === 0) continue;
+
+      await db.box.put({
+        graph: currentGraph,
+        name: page.originalName,
+        uuid: page.uuid,
+        time: updatedTime,
+        summary: [],
+        image: '',
+      });
+
+      // Load summary asynchronously
+      const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
+
+      const [summary, image] = getSummary(blocks);
+
+      // Use compound key
+      await db.box.update([currentGraph, page.originalName], {
+        summary,
+        image,
+      });
+
+      setLoadedCardCount(counter++);
+    }
+    console.timeEnd('fetchData');
+    setLoading(false);
+  }, [currentDirHandle, currentGraph]);
+
   useEffect(() => {
     const getUserConfigs = async () => {
       const { currentGraph, preferredDateFormat, preferredLanguage } = await logseq.App.getUserConfigs();
@@ -99,7 +227,7 @@ function App() {
       stopLoading = true;
 
       setLoadedCardCount(0);
-      
+
       setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
 
       setCurrentGraph(currentGraph);
@@ -107,86 +235,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const getSummary = (blocks: BlockEntity[]): [string[], string] => {
-      const max = 100;
-      let total = 0;
-      const summary = [];
-      let image = '';
-      const parentStack: ParentBlocks[] = [];
-
-      if (blocks && blocks.length > 0) {
-        parentStack.push({
-          blocks,
-          index: 0,
-        });
-
-        while (total < max) {
-          let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
-          while (currentParent.index >= currentParent.blocks.length) {
-            parentStack.pop();
-            if (parentStack.length === 0) break;
-            currentParent = parentStack[parentStack.length - 1];
-          }
-          if (parentStack.length === 0) break;
-
-          const block = currentParent.blocks[currentParent.index++];
-
-          if (Object.prototype.hasOwnProperty.call(block, 'id')) {
-            let content = (block as BlockEntity).content.substring(0, max);
-            if (parentStack.length > 1) {
-              content = '  '.repeat(parentStack.length - 1) + '* ' + content;
-            }
-            total += content.length;
-            summary.push(content);
-
-            if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
-              parentStack.push({
-                blocks: (block as BlockEntity).children!,
-                index: 0,
-              });
-            }
-          }
-        }
-
-        // Search embedded image
-        parentStack.splice(0, parentStack.length);
-        parentStack.push({
-          blocks,
-          index: 0,
-        });
-
-        while (parentStack.length > 0) {
-          let currentParent: ParentBlocks = parentStack[parentStack.length - 1];
-          while (currentParent.index >= currentParent.blocks.length) {
-            parentStack.pop();
-            if (parentStack.length === 0) break;
-            currentParent = parentStack[parentStack.length - 1];
-          }
-          if (parentStack.length === 0) break;
-
-          const block = currentParent.blocks[currentParent.index++];
-
-          if (Object.prototype.hasOwnProperty.call(block, 'id')) {
-            const ma = (block as BlockEntity).content.match(/\(..\/assets\/(.+\.(png|jpg|jpeg))/);
-            if (ma) {
-              image = ma[1];
-              console.log("asset: " + ma[1]);
-              break;
-            }
-            //            summary.push(content);
-
-            if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
-              parentStack.push({
-                blocks: (block as BlockEntity).children!,
-                index: 0,
-              });
-            }
-          }
-        }
-      }
-      return [summary, image];
-    };
-
     const onFileChanged = async (changes: {
       blocks: BlockEntity[];
       txData: IDatom[];
@@ -279,61 +327,17 @@ function App() {
       }
     };
 
-    const fetchData = async () => {
-      const pageCountInCurrentGraph = await db.box.where('graph').equals(currentGraph).count();
-      if (pageCountInCurrentGraph > 0) {
-        setLoading(false);
-        // count boxes not by cardboxes.length
-        setLoadedCardCount(pageCountInCurrentGraph);
-        return;
-      }
-      
-      setLoadedCardCount(0);
-
-      const pages = await logseq.Editor.getAllPages();
-      if (!pages) return [];
-      let counter = 1;
-
-      stopLoading = false;
-      for (const page of pages) {
-        if (stopLoading) {
-          setLoadedCardCount(0);
-          break;
-        }
-        if (page['journal?']) continue;
-
-        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
-        if (updatedTime === 0) continue;
-
-
-        db.box.put({
-          graph: currentGraph,
-          name: page.originalName,
-          uuid: page.uuid,
-          time: updatedTime,
-          summary: [],
-          image: '',
-        });
-
-
-        // Load summary asynchronously
-        logseq.Editor.getPageBlocksTree(page.uuid).then(blocks => {
-          const [summary, image] = getSummary(blocks);
-
-          // Use compound key
-          db.box.update([currentGraph, page.originalName], {
-            summary,
-            image,
-          });
-        });
-
-        setLoadedCardCount(counter++);
-      }
-      setLoading(false);
-    };
-
     if (currentDirHandle) {
-      fetchData();
+      db.box.where('graph').equals(currentGraph).count().then(count => {
+        if (count > 0) {
+          setLoading(false);
+          // count boxes not by cardboxes.length
+          setLoadedCardCount(count);
+        }
+        else {
+          fetchData();
+        }
+      });
 
       // onChanged returns a function to unsubscribe.
       // Use 'return unsubscribe_function' to call unsubscribe_function
@@ -343,7 +347,7 @@ function App() {
         removeOnChanged();
       }
     }
-  }, [currentDirHandle, currentGraph]);
+  }, [currentDirHandle, currentGraph, fetchData]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
@@ -570,7 +574,7 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => { }}>
+          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => fetchData()}>
             {t("rebuild-btn")}
           </button>
         </div>
