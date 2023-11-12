@@ -146,7 +146,6 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
-let stopLoading = false;
 
 function App() {
   const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
@@ -154,7 +153,6 @@ function App() {
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [loadedCardCount, setLoadedCardCount] = useState<number>(0);
-
   const [selectedBox, setSelectedBox] = useState<number>(0);
 
   const cardboxes = useLiveQuery(
@@ -167,47 +165,48 @@ function App() {
 
 
   const fetchData = useCallback(async () => {
-    setLoadedCardCount(0);
     setLoading(true);
 
     const pages = await logseq.Editor.getAllPages();
     if (!pages) return [];
-    let counter = 1;
 
-    stopLoading = false;
+    setLoadedCardCount(0);
+
     console.time('fetchData');
+    const promises = [];
     for (const page of pages) {
-      if (stopLoading) {
-        setLoadedCardCount(0);
-        break;
-      }
       if (page['journal?']) continue;
 
-      const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
-      if (updatedTime === 0) continue;
+      promises.push((async () => {
+        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
+        if (updatedTime === 0) return;
 
-      await db.box.put({
-        graph: currentGraph,
-        name: page.originalName,
-        uuid: page.uuid,
-        time: updatedTime,
-        summary: [],
-        image: '',
-      });
+        await db.box.put({
+          graph: currentGraph,
+          name: page.originalName,
+          uuid: page.uuid,
+          time: updatedTime,
+          summary: [],
+          image: '',
+        });
 
-      // Load summary asynchronously
-      const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
+        setLoadedCardCount(loadedCardCount => loadedCardCount + 1);
+                
+        // Load summary asynchronously
+        const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
 
-      const [summary, image] = getSummary(blocks);
+        const [summary, image] = getSummary(blocks);
 
-      // Use compound key
-      await db.box.update([currentGraph, page.originalName], {
-        summary,
-        image,
-      });
-
-      setLoadedCardCount(counter++);
+        // Use compound key
+        await db.box.update([currentGraph, page.originalName], {
+          summary,
+          image,
+        });
+      })());
     }
+
+    await Promise.all(promises);
+
     console.timeEnd('fetchData');
     setLoading(false);
   }, [currentDirHandle, currentGraph]);
@@ -223,8 +222,6 @@ function App() {
 
     return logseq.App.onCurrentGraphChanged(async () => {
       const { currentGraph } = await logseq.App.getUserConfigs();
-
-      stopLoading = true;
 
       setLoadedCardCount(0);
 
@@ -331,7 +328,6 @@ function App() {
       db.box.where('graph').equals(currentGraph).count().then(count => {
         if (count > 0) {
           setLoading(false);
-          // count boxes not by cardboxes.length
           setLoadedCardCount(count);
         }
         else {
