@@ -155,6 +155,8 @@ function App() {
   const [loadedCardCount, setLoadedCardCount] = useState<number>(0);
   const [selectedBox, setSelectedBox] = useState<number>(0);
 
+  const { t } = useTranslation();
+
   const cardboxes = useLiveQuery(
     () => db.box
       .orderBy('time')
@@ -458,8 +460,15 @@ function App() {
 
   const openDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker();
-    dirHandles[currentGraph] = handle;
-    setCurrentDirHandle(handle);
+    // Cannot get full path of the selected directory because of security reason.
+    // Check only the directory name
+    if (handle.name === 'pages') {
+      dirHandles[currentGraph] = handle;
+      setCurrentDirHandle(handle);
+    }
+    else {
+      alert(t('please-select-pages'));
+    }
   };
 
   const rebuildData = useCallback(async () => {
@@ -487,8 +496,6 @@ function App() {
     }
 
     const idealCols = Math.floor(tileWidth / ((tile!.children[0] as HTMLElement).offsetWidth + 10 * 2));
-
-    console.log(idealCols + ',' + tile!.childElementCount);
 
     if (tile!.childElementCount <= idealCols) {
       // Because margin-right is auto, boxes in the first line are heavily spaced
@@ -557,7 +564,7 @@ function App() {
     </div>
   ));
 
-  const { t } = useTranslation();
+
   return (
     <>
       <div className='control'>

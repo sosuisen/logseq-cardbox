@@ -3,5 +3,6 @@
     "open-pages-btn": "Select pages folder",
     "open-pages-btn-label": "Please select the pages folder in the Logseq graph storage folder." ,
     "footer": "Click or move the cursor and press Enter to open the page; hold down the Shift key to open in sidebar. *Empty pages are not displayed.",
-    "loading" : "Loading..."
+    "loading" : "Loading...",
+    "please-select-pages": "Select the folder named 'pages'"
 }
