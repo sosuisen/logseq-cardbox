@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
 import i18n from "i18next";
-import { db, Box, setDB } from './db';
+import { db, Box } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -80,8 +80,9 @@ function App() {
     () => db.box
       .orderBy('time')
       .reverse()
+      .filter(box => box.graph === currentGraph)
       .toArray()
-    , [db]);
+    , [currentGraph]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -97,8 +98,8 @@ function App() {
 
       stopLoading = true;
 
-      setDB(currentGraph);
-
+      setLoadedCardCount(0);
+      
       setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
 
       setCurrentGraph(currentGraph);
@@ -245,9 +246,9 @@ function App() {
             const blocks = await logseq.Editor.getPageBlocksTree(originalName);
             const [summary, image] = getSummary(blocks);
 
-            const box = await db.box.get(originalName);
+            const box = await db.box.get([currentGraph, originalName]);
             if (box) {
-              db.box.update(originalName, {
+              db.box.update([currentGraph, originalName], {
                 time: updatedTime,
                 summary,
                 image,
@@ -258,6 +259,7 @@ function App() {
               const page = await logseq.Editor.getPage(originalName);
               if (page) {
                 db.box.put({
+                  graph: currentGraph,
                   name: originalName,
                   uuid: page.uuid,
                   time: updatedTime,
@@ -268,7 +270,7 @@ function App() {
             }
           }
           else if (operation === 'delete') {
-            db.box.delete(originalName);
+            db.box.delete([currentGraph, originalName]);
           }
           else {
             console.log('Unknown operation: ' + operation);
@@ -278,6 +280,16 @@ function App() {
     };
 
     const fetchData = async () => {
+      const pageCountInCurrentGraph = await db.box.where('graph').equals(currentGraph).count();
+      if (pageCountInCurrentGraph > 0) {
+        setLoading(false);
+        // count boxes not by cardboxes.length
+        setLoadedCardCount(pageCountInCurrentGraph);
+        return;
+      }
+      
+      setLoadedCardCount(0);
+
       const pages = await logseq.Editor.getAllPages();
       if (!pages) return [];
       let counter = 1;
@@ -295,6 +307,7 @@ function App() {
 
 
         db.box.put({
+          graph: currentGraph,
           name: page.originalName,
           uuid: page.uuid,
           time: updatedTime,
@@ -307,7 +320,8 @@ function App() {
         logseq.Editor.getPageBlocksTree(page.uuid).then(blocks => {
           const [summary, image] = getSummary(blocks);
 
-          db.box.update(page.originalName, {
+          // Use compound key
+          db.box.update([currentGraph, page.originalName], {
             summary,
             image,
           });
@@ -319,7 +333,6 @@ function App() {
     };
 
     if (currentDirHandle) {
-      // setBoxes([]);
       fetchData();
 
       // onChanged returns a function to unsubscribe.
@@ -330,7 +343,7 @@ function App() {
         removeOnChanged();
       }
     }
-  }, [currentDirHandle]);
+  }, [currentDirHandle, currentGraph]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
@@ -558,7 +571,7 @@ function App() {
             </span>
           </div>
           <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => { }}>
-            {t("reload-btn")}
+            {t("rebuild-btn")}
           </button>
         </div>
       </div>

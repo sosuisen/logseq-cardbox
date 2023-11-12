@@ -1,6 +1,7 @@
 import Dexie, { Table } from 'dexie';
 
 export interface Box {
+  graph: string; // graph name in Logseq db
   name: string; // originalName in Logseq db
   uuid: string; // uuid in Logseq db  
   time: number; // Unix time
@@ -14,16 +15,9 @@ export class CardBoxDexie extends Dexie {
   constructor(dbName: string) {
     super(dbName);
     this.version(1).stores({
-      box: '&name, time' // name is the primary key and followings are indexed props
+      box: '[graph+name], graph, time' // [graph+name] is the compound primary key, and time is an indexed property.
     });
   }
 }
 
-export let db: CardBoxDexie;
-
-export const setDB = (dbName: string) => {
-  if (db) {
-    db.close();
-  }  
-  db = new CardBoxDexie(dbName);
-};
+export const db = new CardBoxDexie('logseq-cardbox-plugin');

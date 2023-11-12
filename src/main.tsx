@@ -4,7 +4,6 @@ import App from './App.tsx'
 import './index.css'
 import '@logseq/libs'
 import './i18n/configs';
-import { setDB } from './db';
 
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter
@@ -52,24 +51,20 @@ function main() {
   }
   navHeader!.insertBefore(cardboxDiv, navHeader!.lastChild);
 
-  logseq.App.getUserConfigs().then((configs) => {
-    const dbName = configs.currentGraph;
-    setDB(dbName);
 
-    document.body.addEventListener('click', () => {
-      logseq.hideMainUI();
-    });
-
-    document.getElementById('app')!.addEventListener('click', e => {
-      e.stopPropagation();
-    });
-
-    ReactDOM.createRoot(document.getElementById('app')!).render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>,
-    );
+  document.body.addEventListener('click', () => {
+    logseq.hideMainUI();
   });
+
+  document.getElementById('app')!.addEventListener('click', e => {
+    e.stopPropagation();
+  });
+
+  ReactDOM.createRoot(document.getElementById('app')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
 }
 
 // bootstrap
