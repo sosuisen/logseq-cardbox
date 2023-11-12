@@ -63,7 +63,9 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
   return date.getTime();
 };
 
-const dirHandles: {[graphName: string]:  FileSystemDirectoryHandle} = {};
+const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
+
+let stopLoading = false;
 
 function App() {
   const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
@@ -79,7 +81,7 @@ function App() {
       .orderBy('time')
       .reverse()
       .toArray()
-  , [db]);
+    , [db]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -92,13 +94,15 @@ function App() {
 
     return logseq.App.onCurrentGraphChanged(async () => {
       const { currentGraph } = await logseq.App.getUserConfigs();
-      
+
+      stopLoading = true;
+
       setDB(currentGraph);
 
       setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
 
       setCurrentGraph(currentGraph);
-    });    
+    });
   }, []);
 
   useEffect(() => {
@@ -277,12 +281,18 @@ function App() {
       const pages = await logseq.Editor.getAllPages();
       if (!pages) return [];
       let counter = 1;
-      for (const page of pages) {
 
+      stopLoading = false;
+      for (const page of pages) {
+        if (stopLoading) {
+          setLoadedCardCount(0);
+          break;
+        }
         if (page['journal?']) continue;
 
         const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
         if (updatedTime === 0) continue;
+
 
         db.box.put({
           name: page.originalName,
@@ -291,6 +301,7 @@ function App() {
           summary: [],
           image: '',
         });
+
 
         // Load summary asynchronously
         logseq.Editor.getPageBlocksTree(page.uuid).then(blocks => {
@@ -406,7 +417,7 @@ function App() {
             name: box.getElementsByClassName('box-title')[0].innerHTML,
           });
         }
-        logseq.hideMainUI();        
+        logseq.hideMainUI();
       }
 
     };
@@ -546,17 +557,17 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => {}}>
+          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => { }}>
             {t("reload-btn")}
           </button>
         </div>
       </div>
       <div className='dir-not-selected' style={{ display: currentDirHandle === undefined ? 'block' : 'none' }}>
-        <div className='open-pages-btn-label'>{t("open-btn-label")}<br />
+        <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
           ({currentGraph.replace('logseq_local_', '')}/pages)
         </div>
         <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
-          {t("open-btn")}
+          {t("open-pages-btn")}
         </button>
       </div> <div id='tile' style={{ display: currentDirHandle === undefined ? 'none' : 'flex' }}>
         {boxElements}
