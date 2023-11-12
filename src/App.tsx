@@ -162,8 +162,7 @@ function App() {
       .filter(box => box.graph === currentGraph)
       .toArray()
     , [currentGraph]);
-
-
+    
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -191,7 +190,7 @@ function App() {
         });
 
         setLoadedCardCount(loadedCardCount => loadedCardCount + 1);
-                
+
         // Load summary asynchronously
         const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
 
@@ -211,6 +210,7 @@ function App() {
     setLoading(false);
   }, [currentDirHandle, currentGraph]);
 
+  
   useEffect(() => {
     const getUserConfigs = async () => {
       const { currentGraph, preferredDateFormat, preferredLanguage } = await logseq.App.getUserConfigs();
@@ -462,6 +462,12 @@ function App() {
     setCurrentDirHandle(handle);
   };
 
+  const rebuildData = useCallback(async () => {
+    await db.box.where('graph').equals(currentGraph).delete();
+    fetchData();
+  }, [currentGraph, fetchData]);
+
+
   const getBoxStyle = (index: number): CSSProperties => {
     const tile = document.getElementById('tile');
     if (!tile?.hasChildNodes()) {
@@ -570,7 +576,7 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => fetchData()}>
+          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => rebuildData()}>
             {t("rebuild-btn")}
           </button>
         </div>
