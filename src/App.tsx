@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
 import i18n from "i18next";
-import { db, Box } from './db';
+import { db, Box, setDB } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
 
@@ -63,8 +63,10 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
   return date.getTime();
 };
 
+const dirHandles: {[graphName: string]:  FileSystemDirectoryHandle} = {};
+
 function App() {
-  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle>();
+  const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
   const [currentGraph, setCurrentGraph] = useState<string>('');
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -77,7 +79,7 @@ function App() {
       .orderBy('time')
       .reverse()
       .toArray()
-  );
+  , [db]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -87,6 +89,16 @@ function App() {
       i18n.changeLanguage(preferredLanguage);
     };
     getUserConfigs();
+
+    return logseq.App.onCurrentGraphChanged(async () => {
+      const { currentGraph } = await logseq.App.getUserConfigs();
+      
+      setDB(currentGraph);
+
+      setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
+
+      setCurrentGraph(currentGraph);
+    });    
   }, []);
 
   useEffect(() => {
@@ -209,7 +221,7 @@ function App() {
 
       // Ignore create event because the file is not created yet.
       if ((operation == 'modified' || operation == 'delete')
-        && dirHandle !== undefined) {
+        && currentDirHandle !== undefined) {
         const ma = path.match(/pages\/(.*)\.md/);
         if (ma) {
           const fileName = ma[1];
@@ -220,7 +232,7 @@ function App() {
 
           const originalName = decodeLogseqFileName(fileName);
           if (operation === 'modified') {
-            updatedTime = await getLastUpdatedTime(fileName, dirHandle!);
+            updatedTime = await getLastUpdatedTime(fileName, currentDirHandle!);
             if (updatedTime === 0) {
               console.log('Failed to get updated time.');
               return;
@@ -269,7 +281,7 @@ function App() {
 
         if (page['journal?']) continue;
 
-        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), dirHandle!);
+        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!);
         if (updatedTime === 0) continue;
 
         db.box.put({
@@ -295,7 +307,7 @@ function App() {
       setLoading(false);
     };
 
-    if (dirHandle) {
+    if (currentDirHandle) {
       // setBoxes([]);
       fetchData();
 
@@ -307,7 +319,7 @@ function App() {
         removeOnChanged();
       }
     }
-  }, [dirHandle]);
+  }, [currentDirHandle]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
@@ -422,7 +434,8 @@ function App() {
 
   const openDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker();
-    setDirHandle(handle);
+    dirHandles[currentGraph] = handle;
+    setCurrentDirHandle(handle);
   };
 
   const getBoxStyle = (index: number): CSSProperties => {
@@ -517,7 +530,7 @@ function App() {
     <>
       <div className='control'>
         <div className='control-left'>
-          <div className='loading' style={{ display: loading && dirHandle != undefined ? 'block' : 'none' }}>
+          <div className='loading' style={{ display: loading && currentDirHandle != undefined ? 'block' : 'none' }}>
             {t("loading")}
           </div>
           <div className='card-number'>
@@ -533,20 +546,19 @@ function App() {
               close
             </span>
           </div>
-          <button className='open-btn-control' style={{ display: dirHandle === undefined ? 'none' : 'block' }} onClick={() => openDirectoryPicker()}>
-            {t("open-btn-control")}
+          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => {}}>
+            {t("reload-btn")}
           </button>
         </div>
       </div>
-      <div className='dir-not-selected' style={{ display: dirHandle === undefined ? 'block' : 'none' }}>
-        <div className='open-btn-label'>{t("open-btn-label")}<br />
+      <div className='dir-not-selected' style={{ display: currentDirHandle === undefined ? 'block' : 'none' }}>
+        <div className='open-pages-btn-label'>{t("open-btn-label")}<br />
           ({currentGraph.replace('logseq_local_', '')}/pages)
         </div>
-        <button className='open-btn' onClick={() => openDirectoryPicker()}>
+        <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
           {t("open-btn")}
         </button>
-      </div>
-      <div id='tile' style={{ display: dirHandle === undefined ? 'none' : 'flex' }}>
+      </div> <div id='tile' style={{ display: currentDirHandle === undefined ? 'none' : 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>

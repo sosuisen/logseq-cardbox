@@ -22,5 +22,8 @@ export class CardBoxDexie extends Dexie {
 export let db: CardBoxDexie;
 
 export const setDB = (dbName: string) => {
-    db = new CardBoxDexie(dbName);
+  if (db) {
+    db.close();
+  }  
+  db = new CardBoxDexie(dbName);
 };

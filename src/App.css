@@ -38,7 +38,7 @@
   width: 110px;
 }
 
-.open-btn-control {
+.reload-btn {
   float: right;
   margin-right: 24px;
   margin-top: 4px;
@@ -54,12 +54,12 @@
   width: 32px;
 }
 
-.open-btn {
+.open-pages-btn {
   font-size: 24px;
   margin-top: 24px;
 }
 
-.open-btn-label {
+.open-pages-btn-label {
   font-size: 24px;
   margin-top: 24px;
   margin-left: 5px;
