@@ -1,4 +1,4 @@
-# Logseq CardBox Plugin <img align="left" src="./images/cardbox_small.png" height="40" style="margin-right: 10px"> [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
+# Logseq CardBox Plugin
 
 Plugin to add thumbnail cards to [Logseq](https://github.com/logseq/logseq) that are displayed in order of update.
 
@@ -44,3 +44,9 @@ You need to restart Logseq for the language change to take effect.
 - The 'folder selection' operation is only required once for each graph when Logseq is launched.
 - Changes made directly to the .md file while Logseq is not running will not be reflected in the CardBox.
   - To reflect them, you need to press the 'Rebuild' button.
+
+# Support
+
+If you like it, please donate to me to continue the development.
+
+[![donate](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/hidekaz)
