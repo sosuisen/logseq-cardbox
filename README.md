@@ -1,4 +1,4 @@
-# Logseq CardBox Plugin <img align="left" src="./images/cardbox_small.png" height="30" style="margin-right: 10px"> [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
+# Logseq CardBox Plugin <img align="left" src="./images/cardbox_small.png" height="40" style="margin-right: 10px"> [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
 
 
 
