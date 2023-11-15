@@ -1,7 +1,7 @@
-# Logseq CardBox Plugin [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
+# Logseq CardBox Plugin <img align="left" src="./images/cardbox_small.png" height="30" style="margin-right: 10px"> [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
 
 
-![logo](./images/icon_small.png)
+
 
 Plugin to add thumbnail cards to [Logseq](https://github.com/logseq/logseq) that are displayed in order of update.
 
