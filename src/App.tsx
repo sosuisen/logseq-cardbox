@@ -164,7 +164,7 @@ function App() {
       .filter(box => box.graph === currentGraph)
       .toArray()
     , [currentGraph]);
-    
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -573,7 +573,7 @@ function App() {
             {t("loading")}
           </div>
           <div className='card-number'>
-            {cardboxes?.length !== loadedCardCount ? loadedCardCount : cardboxes?.length ?? 0} cards
+            {loading ? loadedCardCount : cardboxes?.length ?? 0} cards
           </div>
         </div>
         <div className='control-center'>
