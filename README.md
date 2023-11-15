@@ -24,7 +24,7 @@ Any of the following:
 
 ![main](./images/screen-select-folder.png)
 
-## Selecting card
+## Selecting a card
 - The thumbnail cards of the pages are ordered by the date of the last update, starting from the top left.
   - Only pages are displayed. The journal and whiteboard are not displayed.
 - Click on a page or use the cursor keys to move the selection and press Enter to open it.
