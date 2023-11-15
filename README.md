@@ -1,1 +1,1 @@
-# logseq-cardbox
+# Logseq CardBox Plugin
