@@ -1,13 +1,9 @@
 {
   "name": "logseq-cardbox",
-  "version": "0.1.0",
   "description": "Plugin to add thumbnail cards to Logseq that are displayed in order of update.",
+  "version": "0.1.0",
   "type": "module",
   "main": "dist/index.html",
-  "author": {
-    "name": "Hidekazu Kubota",
-    "email": "hidekazu.kubota@gmail.com"
-  },
   "license": "MPL-2.0",
   "scripts": {
     "dev": "vite",
@@ -42,6 +38,8 @@
   },
   "logseq": {
     "id": "logseq-cardbox_3sulqr0v8",
+    "title": "Logseq CardBox",
     "icon": "./icon.png"
-  }
+  },
+  "author": "Hidekazu Kubota"
 }
