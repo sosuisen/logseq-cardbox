@@ -1,7 +1,7 @@
 {
   "name": "logseq-cardbox",
   "description": "Plugin to add thumbnail cards to Logseq that are displayed in order of update.",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "type": "module",
   "main": "dist/index.html",
   "license": "MPL-2.0",
