@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/index.html",
   "license": "MPL-2.0",
+  "repository": "sosuisen/logseq-cardbox",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
