@@ -1,5 +1,7 @@
 # Logseq CardBox Plugin
 
+English / [日本語](https://scrapbox.io/logseq-ja/Logseq_Cardbox_Plugin%2F%E4%BD%BF%E3%81%84%E6%96%B9)
+
 Plugin to add thumbnail cards to [Logseq](https://github.com/logseq/logseq) that are displayed in order of update.
 
 ![main](./images/screen-main.png)
