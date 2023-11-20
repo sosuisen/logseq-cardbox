@@ -17,6 +17,16 @@ type ParentBlocks =
     index: number;
   };
 
+type FileChanges = {
+  blocks: BlockEntity[];
+  txData: IDatom[];
+  txMeta?: {
+    outlinerOp: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
+  };
+}
+
 const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in windows file name.
   if (!name) return '';
@@ -49,7 +59,7 @@ const decodeLogseqFileName = (name: string) => {
 const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle, preferredFormat: MarkdownOrOrg): Promise<number> => {
   // Cannot get from subdirectory.
   // const path = `pages/${fileName}.md`;
-  let path = fileName + preferredFormat === 'md' ? '.md' : '.org';
+  let path = fileName + (preferredFormat === 'markdown' ? '.md' : '.org');
 
   let fileHandle = await handle.getFileHandle(path).catch(() => {
     // Logseq does not save an empty page as a local file.
@@ -57,7 +67,8 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
     return null;
   });
   if (!fileHandle) {
-    path = fileName + preferredFormat === 'md' ? '.org' : '.md';
+    path = fileName + (preferredFormat === 'markdown' ? '.org' : '.md');
+    console.log(`Retry: ${path}`);
     fileHandle = await handle.getFileHandle(path).catch(() => {
       // Logseq does not save an empty page as a local file.
       console.log(`Failed to get file handle: ${path}`);
@@ -153,6 +164,36 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
   return [summary, image];
 };
 
+const parseOperation = (changes: FileChanges): [Operation, string] => {
+  let operation: Operation = '';
+  let path = '';
+  for (const block of changes.blocks) {
+    if (Object.prototype.hasOwnProperty.call(block, 'path')) {
+      if (changes.txData.length === 0) continue;
+      if (changes.txData[0][1] === 'lastModifiedAt') {
+        operation = 'modified';
+        path = block.path;
+        console.log("File modified: " + block.path);
+        break;
+      }
+    }
+  }
+  if (operation === '') {
+    for (const data of changes.txData) {
+      if (data.length === 5 && data[1] === 'path') {
+        path = data[2];
+        let createOrDelete: Operation = 'create';
+        if (data[4] === false) {
+          createOrDelete = 'delete';
+        }
+        operation = createOrDelete;
+        console.log(`File ${createOrDelete}: ${path}`);
+        break;
+      }
+    }
+  }
+  return [operation, path];
+};
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
@@ -176,6 +217,27 @@ function App() {
       .toArray()
     , [currentGraph]);
 
+  useEffect(() => {
+    const getUserConfigs = async () => {
+      const { currentGraph, preferredDateFormat, preferredLanguage, preferredFormat } = await logseq.App.getUserConfigs();
+      setCurrentGraph(currentGraph);
+      setPreferredDateFormat(preferredDateFormat);
+      setPreferredFormat(preferredFormat);
+      i18n.changeLanguage(preferredLanguage);
+    };
+    getUserConfigs();
+
+    return logseq.App.onCurrentGraphChanged(async () => {
+      const { currentGraph } = await logseq.App.getUserConfigs();
+
+      setLoadedCardCount(0);
+
+      setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
+
+      setCurrentGraph(currentGraph);
+    });
+  }, []);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
 
@@ -184,7 +246,6 @@ function App() {
 
     setLoadedCardCount(0);
 
-    console.time('fetchData');
     const promises = [];
     for (const page of pages) {
       if (page['journal?']) continue;
@@ -219,122 +280,7 @@ function App() {
 
     await Promise.all(promises);
 
-    console.timeEnd('fetchData');
     setLoading(false);
-  }, [currentDirHandle, currentGraph, preferredFormat]);
-
-  
-  useEffect(() => {
-    const getUserConfigs = async () => {
-      const { currentGraph, preferredDateFormat, preferredLanguage, preferredFormat } = await logseq.App.getUserConfigs();
-      setCurrentGraph(currentGraph);
-      setPreferredDateFormat(preferredDateFormat);
-      setPreferredFormat(preferredFormat);
-      i18n.changeLanguage(preferredLanguage);
-    };
-    getUserConfigs();
-
-    return logseq.App.onCurrentGraphChanged(async () => {
-      const { currentGraph } = await logseq.App.getUserConfigs();
-
-      setLoadedCardCount(0);
-
-      setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
-
-      setCurrentGraph(currentGraph);
-    });
-  }, []);
-
-  const onFileChanged = useCallback(async (changes: {
-    blocks: BlockEntity[];
-    txData: IDatom[];
-    txMeta?: {
-      outlinerOp: string;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      [key: string]: any;
-    };
-  }) => {
-    let operation: Operation = '';
-    let path = '';
-    for (const block of changes.blocks) {
-      if (Object.prototype.hasOwnProperty.call(block, 'path')) {
-        if (changes.txData.length === 0) continue;
-        if (changes.txData[0][1] === 'lastModifiedAt') {
-          operation = 'modified';
-          path = block.path;
-          console.log("File modified: " + block.path);
-          break;
-        }
-      }
-    }
-    if (operation === '') {
-      for (const data of changes.txData) {
-        if (data.length === 5 && data[1] === 'path') {
-          path = data[2];
-          let createOrDelete: Operation = 'create';
-          if (data[4] === false) {
-            createOrDelete = 'delete';
-          }
-          operation = createOrDelete;
-          console.log(`File ${createOrDelete}: ${path}`);
-          break;
-        }
-      }
-    }
-
-    // Ignore create event because the file is not created yet.
-    if ((operation == 'modified' || operation == 'delete')
-      && currentDirHandle !== undefined) {
-      const ma = path.match(/pages\/(.*)\.(md|org)/);
-      if (ma) {
-        const fileName = ma[1];
-
-        let updatedTime = 0;
-
-        console.log(`${operation}, ${fileName}`);
-
-        const originalName = decodeLogseqFileName(fileName);
-        if (operation === 'modified') {
-          updatedTime = await getLastUpdatedTime(fileName, currentDirHandle!, preferredFormat);
-          if (updatedTime === 0) {
-            console.log('Failed to get updated time.');
-            return;
-          }
-
-          const blocks = await logseq.Editor.getPageBlocksTree(originalName);
-          const [summary, image] = getSummary(blocks);
-
-          const box = await db.box.get([currentGraph, originalName]);
-          if (box) {
-            db.box.update([currentGraph, originalName], {
-              time: updatedTime,
-              summary,
-              image,
-            });
-          }
-          else {
-            // create
-            const page = await logseq.Editor.getPage(originalName);
-            if (page) {
-              db.box.put({
-                graph: currentGraph,
-                name: originalName,
-                uuid: page.uuid,
-                time: updatedTime,
-                summary,
-                image,
-              })
-            }
-          }
-        }
-        else if (operation === 'delete') {
-          db.box.delete([currentGraph, originalName]);
-        }
-        else {
-          console.log('Unknown operation: ' + operation);
-        }
-      }
-    }
   }, [currentDirHandle, currentGraph, preferredFormat]);
 
   useEffect(() => {
@@ -348,7 +294,69 @@ function App() {
           fetchData();
         }
       });
+    }
+  }, [currentDirHandle, currentGraph, fetchData]);
 
+  useEffect(() => {
+    const onFileChanged = async (changes: FileChanges) => {
+      const [operation, path] = parseOperation(changes);
+  
+      // Ignore create event because the file is not created yet.
+      if ((operation == 'modified' || operation == 'delete')
+        && currentDirHandle !== undefined) {
+        const ma = path.match(/pages\/(.*)\.(md|org)/);
+        if (ma) {
+          const fileName = ma[1];
+          const format: MarkdownOrOrg = ma[1] === 'md' ? 'markdown' : 'org';
+  
+          let updatedTime = 0;
+  
+          console.log(`${operation}, ${fileName}`);
+  
+          const originalName = decodeLogseqFileName(fileName);
+          if (operation === 'modified') {
+            updatedTime = await getLastUpdatedTime(fileName, currentDirHandle!, format);
+            if (updatedTime === 0) {
+              console.log('Failed to get updated time.');
+              return;
+            }
+  
+            const blocks = await logseq.Editor.getPageBlocksTree(originalName);
+            const [summary, image] = getSummary(blocks);
+  
+            const box = await db.box.get([currentGraph, originalName]);
+            if (box) {
+              db.box.update([currentGraph, originalName], {
+                time: updatedTime,
+                summary,
+                image,
+              });
+            }
+            else {
+              // create
+              const page = await logseq.Editor.getPage(originalName);
+              if (page) {
+                db.box.put({
+                  graph: currentGraph,
+                  name: originalName,
+                  uuid: page.uuid,
+                  time: updatedTime,
+                  summary,
+                  image,
+                })
+              }
+            }
+          }
+          else if (operation === 'delete') {
+            db.box.delete([currentGraph, originalName]);
+          }
+          else {
+            console.log('Unknown operation: ' + operation);
+          }
+        }
+      }
+    };
+    if (currentDirHandle) {
       // onChanged returns a function to unsubscribe.
       // Use 'return unsubscribe_function' to call unsubscribe_function
       // when component is unmounted, otherwise a lot of listeners will be left.
@@ -357,7 +365,7 @@ function App() {
         removeOnChanged();
       }
     }
-  }, [currentDirHandle, currentGraph, fetchData, onFileChanged]);
+  }, [currentDirHandle, currentGraph]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
