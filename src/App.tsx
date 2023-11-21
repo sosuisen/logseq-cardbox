@@ -146,7 +146,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
       if (Object.prototype.hasOwnProperty.call(block, 'id')) {
         // Markdown ![xxx](../assets/xxx.png)
         // Org mode [[../assets/xxx.png]]
-        const ma = (block as BlockEntity).content.match(/[[(]..\/assets\/(.+\.(png|jpg|jpeg))[\])]/);
+        const ma = (block as BlockEntity).content.match(/[[(]..\/assets\/(.+\.(png|jpg|jpeg))[\])]/i);
         if (ma) {
           image = ma[1];
           console.log("asset: " + ma[1]);
