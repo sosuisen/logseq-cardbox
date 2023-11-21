@@ -371,6 +371,7 @@ function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
+      if (loading) return;
       const tile = document.getElementById('tile');
       if (!tile?.hasChildNodes()) {
         return;
@@ -478,7 +479,7 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
     };
-  });
+  }, [loading]);
 
   const openDirectoryPicker = async () => {
     const handle = await window.showDirectoryPicker();
