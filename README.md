@@ -1,4 +1,5 @@
-# Logseq CardBox Plugin
+# Logseq CardBox Plugin [<img align="right" src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="30"/>](https://www.buymeacoffee.com/hidekaz)
+
 
 English / [日本語](https://scrapbox.io/logseq-ja/Logseq_Cardbox_Plugin%2F%E4%BD%BF%E3%81%84%E6%96%B9)
 
