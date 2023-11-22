@@ -44,6 +44,7 @@ You need to restart Logseq for the language change to take effect.
   - Logseq does not create .md files for title-only pages without body text. This plugin reads the modification time of the .md file directly, so pages with no file cannot be displayed.
 - Logseq is currently in beta and cannot correctly manage page modification times. For this reason, this plugin needs a "Folder selection" operation to obtain the modification time.
   - By the time Logseq v1.0 is released, the 'folder selection' operation will no longer be necessary.
+  - See https://github.com/logseq/logseq/issues/8556
 - The 'folder selection' operation is only required once for each graph when Logseq is launched.
 - Changes made directly to the .md file while Logseq is not running will not be reflected in the CardBox.
   - To reflect them, you need to press the 'Rebuild' button.
