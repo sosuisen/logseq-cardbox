@@ -4,13 +4,31 @@ import App from './App.tsx'
 import './index.css'
 import '@logseq/libs'
 import './i18n/configs';
+import { SimpleCommandKeybinding } from '@logseq/libs/dist/LSPlugin'
 
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter
+  /*
   logseq.App.registerCommandShortcut(
     { binding: 'mod+shift+enter' },
     () => logseq.showMainUI(),
-  );
+    );
+  */
+  // It might be more in line with the Logseq way to register it in the command palette. 
+  // In this case, it's also possible to assign a name to the shortcut."
+  const command: {
+    key: string;
+    keybinding: SimpleCommandKeybinding
+    label: string;
+  } =  {
+    key: 'cardbox:open',
+    keybinding: {
+      binding: 'mod+shift+enter',
+      mode: 'global',
+    },
+    label: 'Open CardBox',
+  };
+  logseq.App.registerCommandPalette(command, () => logseq.showMainUI());
 
   logseq.provideStyle(`
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
