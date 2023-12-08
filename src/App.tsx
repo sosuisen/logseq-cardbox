@@ -304,8 +304,7 @@ function App() {
       const [operation, path] = parseOperation(changes);
 
       // Ignore create event because the file is not created yet.
-      if ((operation == 'modified' || operation == 'delete')
-        && currentDirHandle !== undefined) {
+      if (operation == 'modified' || operation == 'delete') {
         const ma = path.match(/pages\/(.*)\.(md|org)/);
         if (ma) {
           const fileName = ma[1];
@@ -349,16 +348,15 @@ function App() {
         }
       }
     };
-    if (currentDirHandle) {
-      // onChanged returns a function to unsubscribe.
-      // Use 'return unsubscribe_function' to call unsubscribe_function
-      // when component is unmounted, otherwise a lot of listeners will be left.
-      const removeOnChanged = logseq.DB.onChanged(onFileChanged);
-      return () => {
-        removeOnChanged();
-      }
+
+    // onChanged returns a function to unsubscribe.
+    // Use 'return unsubscribe_function' to call unsubscribe_function
+    // when component is unmounted, otherwise a lot of listeners will be left.
+    const removeOnChanged = logseq.DB.onChanged(onFileChanged);
+    return () => {
+      removeOnChanged();
     }
-  }, [currentDirHandle, currentGraph]);
+  }, [currentGraph]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
