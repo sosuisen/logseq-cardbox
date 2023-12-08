@@ -149,7 +149,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
         const ma = (block as BlockEntity).content.match(/[[(]..\/assets\/(.+\.(png|jpg|jpeg))[\])]/i);
         if (ma) {
           image = ma[1];
-          console.log("asset: " + ma[1]);
+          // console.log("asset: " + ma[1]);
           break;
         }
         //            summary.push(content);
@@ -253,30 +253,31 @@ function App() {
       if (page['journal?']) continue;
 
       promises.push((async () => {
-        const updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
-        if (updatedTime === 0) return;
-
-        await db.box.put({
-          graph: currentGraph,
-          name: page.originalName,
-          uuid: page.uuid,
-          time: updatedTime,
-          summary: [],
-          image: '',
-        });
-
-        setLoadedCardCount(loadedCardCount => loadedCardCount + 1);
+        let updatedTime: number | undefined = 0;
+        if (currentDirHandle) {
+          updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
+        }
+        else {
+          updatedTime = page.updatedAt;
+        }
+        if (!updatedTime) return;
 
         // Load summary asynchronously
         const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
 
         const [summary, image] = getSummary(blocks);
-
-        // Use compound key
-        await db.box.update([currentGraph, page.originalName], {
-          summary,
-          image,
-        });
+        // Logseq has many meta pages that has no content. Skip them.
+        if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+          await db.box.put({
+            graph: currentGraph,
+            name: page.originalName,
+            uuid: page.uuid,
+            time: updatedTime,
+            summary,
+            image,
+          });
+          setLoadedCardCount(loadedCardCount => loadedCardCount + 1);
+        }
       })());
     }
 
@@ -286,18 +287,16 @@ function App() {
   }, [currentDirHandle, currentGraph, preferredFormat]);
 
   useEffect(() => {
-    if (currentDirHandle) {
-      db.box.where('graph').equals(currentGraph).count().then(count => {
-        if (count > 0) {
-          setLoading(false);
-          setLoadedCardCount(count);
-        }
-        else {
-          fetchData();
-        }
-      });
-    }
-  }, [currentDirHandle, currentGraph, fetchData]);
+    db.box.where('graph').equals(currentGraph).count().then(count => {
+      if (count > 0) {
+        setLoading(false);
+        setLoadedCardCount(count);
+      }
+      else {
+        fetchData();
+      }
+    });
+  }, [currentGraph, fetchData]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
@@ -316,27 +315,34 @@ function App() {
             const blocks = await logseq.Editor.getPageBlocksTree(originalName);
             const [summary, image] = getSummary(blocks);
 
-            const box = await db.box.get([currentGraph, originalName]);
-            if (box) {
-              db.box.update([currentGraph, originalName], {
-                time: updatedTime,
-                summary,
-                image,
-              });
-            }
-            else {
-              // create
-              const page = await logseq.Editor.getPage(originalName);
-              if (page) {
-                db.box.put({
-                  graph: currentGraph,
-                  name: originalName,
-                  uuid: page.uuid,
+            if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+              const box = await db.box.get([currentGraph, originalName]);
+              if (box) {
+                db.box.update([currentGraph, originalName], {
                   time: updatedTime,
                   summary,
                   image,
-                })
+                });
               }
+              else {
+                // create
+                const page = await logseq.Editor.getPage(originalName);
+                if (page) {
+                  db.box.put({
+                    graph: currentGraph,
+                    name: originalName,
+                    uuid: page.uuid,
+                    time: updatedTime,
+                    summary,
+                    image,
+                  })
+                }
+              }
+            }
+            else {
+              // Remove empty page
+              console.log(`Empty page: ${originalName}`);
+              db.box.delete([currentGraph, originalName]);
             }
           }
           else if (operation === 'delete') {
@@ -581,7 +587,7 @@ function App() {
     <>
       <div className='control'>
         <div className='control-left'>
-          <div className='loading' style={{ display: loading && currentDirHandle != undefined ? 'block' : 'none' }}>
+          <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
             {t("loading")}
           </div>
           <div className='card-number'>
@@ -597,19 +603,19 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: currentDirHandle === undefined ? 'none' : 'block' }} onClick={() => rebuildData()}>
+          <button className='rebuild-btn' style={{ display: 'block' }} onClick={() => rebuildData()}>
             {t("rebuild-btn")}
           </button>
         </div>
       </div>
-      <div className='dir-not-selected' style={{ display: currentDirHandle === undefined ? 'block' : 'none' }}>
+      <div className='dir-not-selected' style={{ display: 'none' }}>
         <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
           ({currentGraph.replace('logseq_local_', '')}/pages)
         </div>
         <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
           {t("open-pages-btn")}
         </button>
-      </div> <div id='tile' style={{ display: currentDirHandle === undefined ? 'none' : 'flex' }}>
+      </div> <div id='tile' style={{ display: 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>
