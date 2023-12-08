@@ -302,30 +302,21 @@ function App() {
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
       const [operation, path] = parseOperation(changes);
-  
+
       // Ignore create event because the file is not created yet.
       if ((operation == 'modified' || operation == 'delete')
         && currentDirHandle !== undefined) {
         const ma = path.match(/pages\/(.*)\.(md|org)/);
         if (ma) {
           const fileName = ma[1];
-          const format: MarkdownOrOrg = ma[1] === 'md' ? 'markdown' : 'org';
-  
-          let updatedTime = 0;
-  
-          console.log(`${operation}, ${fileName}`);
-  
+          const updatedTime = new Date().getTime();
+          console.log(`${operation}, ${fileName}, ${updatedTime}`);
+
           const originalName = decodeLogseqFileName(fileName);
           if (operation === 'modified') {
-            updatedTime = await getLastUpdatedTime(fileName, currentDirHandle!, format);
-            if (updatedTime === 0) {
-              console.log('Failed to get updated time.');
-              return;
-            }
-  
             const blocks = await logseq.Editor.getPageBlocksTree(originalName);
             const [summary, image] = getSummary(blocks);
-  
+
             const box = await db.box.get([currentGraph, originalName]);
             if (box) {
               db.box.update([currentGraph, originalName], {
