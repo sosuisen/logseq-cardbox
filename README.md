@@ -48,6 +48,7 @@ You need to restart Logseq for the language change to take effect.
 - The 'folder selection' operation is only required once for each graph when Logseq is launched.
 - Changes made directly to the .md file while Logseq is not running will not be reflected in the CardBox.
   - To reflect them, you need to press the 'Rebuild' button.
+- Press the 'Rebuild' button after Re-index Logseq. If not you cannot open a page in the sidebar.
 
 # Support
 
