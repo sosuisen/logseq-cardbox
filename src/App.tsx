@@ -265,9 +265,11 @@ function App() {
         updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
       }
       else {
+        // Skip Contents because page.updatedAt of Contents is always wrong.
+        if (page.originalName === 'Contents') continue;
         updatedTime = page.updatedAt;
       }
-      if (!updatedTime) return;
+      if (!updatedTime) continue;
 
       // Load summary asynchronously
       const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
