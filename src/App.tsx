@@ -548,7 +548,7 @@ function App() {
   }
 
   const boxOnClick = async (box: Box, e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.shiftKey) {
+    if (e.nativeEvent.shiftKey) {
       logseq.Editor.openInRightSidebar(box.uuid);
     }
     else {
