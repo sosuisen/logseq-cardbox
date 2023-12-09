@@ -276,41 +276,38 @@ function App() {
               if (!updatedTime) return;
 
               // Load summary asynchronously
-              const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
+              const blocks = await logseq.Editor.getPageBlocksTree(page.uuid).catch(err => {
+                console.error(`Failed to get blocks: ${page.originalName}`);
+                console.error(err);
+                return null;
+              });
 
               // Quick check for empty page
               if (!blocks || blocks.length === 0) {
                 return;
               }
-
-              await db.box.put({
-                graph: currentGraph,
-                name: page.originalName,
-                uuid: page.uuid,
-                time: updatedTime,
-                summary: [],
-                image: '',
-              });
-
               const [summary, image] = getSummary(blocks);
+
               // Logseq has many meta pages that has no content. Skip them.
-              // Detailed check for emtpy page
+              // Detailed check for empty page
               if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
-                // Update asynchronously
-                db.box.update([currentGraph, page.originalName], {
+                await db.box.put({
+                  graph: currentGraph,
+                  name: page.originalName,
+                  uuid: page.uuid,
+                  time: updatedTime,
                   summary,
                   image,
                 });
               }
-              else {
-                // Remove empty page
-                console.log(`Empty page: ${page.originalName}`);
-                db.box.delete([currentGraph, page.originalName]);
-              }
             })());
           }
           if (!page || promises.length >= 100) {
-            await Promise.all(promises);
+            try {
+              await Promise.all(promises);
+            } catch (err) {
+              console.error(err);
+            }
             promises.splice(0, promises.length);
             // LiveQuery needs some time to update.
             await sleep(300);
@@ -627,7 +624,7 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => { 
+          <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
               fetchData();
