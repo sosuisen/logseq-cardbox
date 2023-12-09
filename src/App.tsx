@@ -211,7 +211,6 @@ function App() {
   const [preferredDateFormat, setPreferredDateFormat] = useState<string>('');
   const [preferredFormat, setPreferredFormat] = useState<MarkdownOrOrg>('markdown');
   const [loading, setLoading] = useState<boolean>(true);
-  const [loadedCardCount, setLoadedCardCount] = useState<number>(0);
   const [selectedBox, setSelectedBox] = useState<number>(0);
   const [open, setOpen] = useState<boolean>(false);
 
@@ -238,8 +237,6 @@ function App() {
     return logseq.App.onCurrentGraphChanged(async () => {
       const { currentGraph } = await logseq.App.getUserConfigs();
 
-      setLoadedCardCount(0);
-
       setCurrentDirHandle(dirHandles[currentGraph]); // undefined or FileSystemDirectoryHandle
 
       setCurrentGraph(currentGraph);
@@ -250,75 +247,77 @@ function App() {
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
-        setLoadedCardCount(count);
       }
       else {
         setLoading(true);
 
         // This currentGraph is not the same as the one in state.
         const { currentGraph } = await logseq.App.getUserConfigs();
-    
+
         const pages = await logseq.Editor.getAllPages();
         if (!pages) return [];
-    
-        setLoadedCardCount(0);
-    
-        // Since it takes time to display the first box, do not use Promises.all()"
-        let counter = 0;
-        for (const page of pages) {
-          if (page['journal?']) continue;
-    
-          let updatedTime: number | undefined = 0;
-          if (currentDirHandle) {
-            updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
+
+        const promises = [];
+        while (pages.length > 0) {
+          const page = pages.shift();
+          if (page) {
+            if (page['journal?']) continue;
+
+            promises.push((async () => {
+              let updatedTime: number | undefined = 0;
+              if (currentDirHandle) {
+                updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
+              }
+              else {
+                // Skip Contents because page.updatedAt of Contents is always wrong.
+                if (page.originalName === 'Contents') return;
+                updatedTime = page.updatedAt;
+              }
+              if (!updatedTime) return;
+
+              // Load summary asynchronously
+              const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
+
+              // Quick check for empty page
+              if (!blocks || blocks.length === 0) {
+                return;
+              }
+
+              await db.box.put({
+                graph: currentGraph,
+                name: page.originalName,
+                uuid: page.uuid,
+                time: updatedTime,
+                summary: [],
+                image: '',
+              });
+
+              const [summary, image] = getSummary(blocks);
+              // Logseq has many meta pages that has no content. Skip them.
+              // Detailed check for emtpy page
+              if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+                // Update asynchronously
+                db.box.update([currentGraph, page.originalName], {
+                  summary,
+                  image,
+                });
+              }
+              else {
+                // Remove empty page
+                console.log(`Empty page: ${page.originalName}`);
+                db.box.delete([currentGraph, page.originalName]);
+              }
+            })());
           }
-          else {
-            // Skip Contents because page.updatedAt of Contents is always wrong.
-            if (page.originalName === 'Contents') continue;
-            updatedTime = page.updatedAt;
-          }
-          if (!updatedTime) continue;
-    
-          // Load summary asynchronously
-          const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
-    
-          // Quick check for empty page
-          if (!blocks || blocks.length === 0) {
-            continue;
-          }
-    
-          await db.box.put({
-            graph: currentGraph,
-            name: page.originalName,
-            uuid: page.uuid,
-            time: updatedTime,
-            summary: [],
-            image: '',
-          });
-          // This is not accurate because of quick check above.
-          setLoadedCardCount(++counter);
-    
-          const [summary, image] = getSummary(blocks);
-          // Logseq has many meta pages that has no content. Skip them.
-          // Detailed check for emtpy page
-          if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
-            // Update asynchronously
-            db.box.update([currentGraph, page.originalName], {
-              summary,
-              image,
-            });
-          }
-          else {
-            // Remove empty page
-            console.log(`Empty page: ${page.originalName}`);
-            db.box.delete([currentGraph, page.originalName]);
-          }
-          // LiveQuery needs some time to update.
-          if (counter % 100 === 99) {
+          if (!page || promises.length >= 100) {
+            await Promise.all(promises);
+            promises.splice(0, promises.length);
+            // LiveQuery needs some time to update.
             await sleep(300);
           }
+
         }
-    
+
         setLoading(false);
       }
     });
@@ -614,7 +613,7 @@ function App() {
             {t("loading")}
           </div>
           <div className='card-number'>
-            {loading ? loadedCardCount : cardboxes?.length ?? 0} cards
+            {cardboxes?.length ?? 0} cards
           </div>
         </div>
         <div className='control-center'>
