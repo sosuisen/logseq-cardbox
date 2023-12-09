@@ -627,7 +627,7 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: loading ? 'block' : 'none' }} onClick={async () => { 
+          <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => { 
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
               fetchData();
