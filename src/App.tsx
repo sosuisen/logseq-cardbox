@@ -6,6 +6,7 @@ import i18n from "i18next";
 import { db, Box } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
+import { Dialog } from './Dialog';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
@@ -212,6 +213,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadedCardCount, setLoadedCardCount] = useState<number>(0);
   const [selectedBox, setSelectedBox] = useState<number>(0);
+  const [open, setOpen] = useState<boolean>(false);
 
   const { t } = useTranslation();
 
@@ -244,87 +246,83 @@ function App() {
     });
   }, []);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-
-    // This currentGraph is not the same as the one in state.
-    const { currentGraph } = await logseq.App.getUserConfigs();
-
-    const pages = await logseq.Editor.getAllPages();
-    if (!pages) return [];
-
-    setLoadedCardCount(0);
-
-    // Since it takes time to display the first box, do not use Promises.all()"
-    let counter = 0;
-    for (const page of pages) {
-      if (page['journal?']) continue;
-
-      let updatedTime: number | undefined = 0;
-      if (currentDirHandle) {
-        updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
-      }
-      else {
-        // Skip Contents because page.updatedAt of Contents is always wrong.
-        if (page.originalName === 'Contents') continue;
-        updatedTime = page.updatedAt;
-      }
-      if (!updatedTime) continue;
-
-      // Load summary asynchronously
-      const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
-
-      // Quick check for empty page
-      if (!blocks || blocks.length === 0) {
-        continue;
-      }
-
-      await db.box.put({
-        graph: currentGraph,
-        name: page.originalName,
-        uuid: page.uuid,
-        time: updatedTime,
-        summary: [],
-        image: '',
-      });
-      // This is not accurate because of quick check above.
-      setLoadedCardCount(++counter);
-
-      const [summary, image] = getSummary(blocks);
-      // Logseq has many meta pages that has no content. Skip them.
-      // Detailed check for emtpy page
-      if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
-        // Update asynchronously
-        db.box.update([currentGraph, page.originalName], {
-          summary,
-          image,
-        });
-      }
-      else {
-        // Remove empty page
-        console.log(`Empty page: ${page.originalName}`);
-        db.box.delete([currentGraph, page.originalName]);
-      }
-      // LiveQuery needs some time to update.
-      if (counter % 100 === 99) {
-        await sleep(300);
-      }
-    }
-
-    setLoading(false);
-  }, [currentDirHandle, preferredFormat]);
-
   useEffect(() => {
-    db.box.where('graph').equals(currentGraph).count().then(count => {
+    db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
         setLoadedCardCount(count);
       }
       else {
-        fetchData();
+        setLoading(true);
+
+        // This currentGraph is not the same as the one in state.
+        const { currentGraph } = await logseq.App.getUserConfigs();
+    
+        const pages = await logseq.Editor.getAllPages();
+        if (!pages) return [];
+    
+        setLoadedCardCount(0);
+    
+        // Since it takes time to display the first box, do not use Promises.all()"
+        let counter = 0;
+        for (const page of pages) {
+          if (page['journal?']) continue;
+    
+          let updatedTime: number | undefined = 0;
+          if (currentDirHandle) {
+            updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
+          }
+          else {
+            // Skip Contents because page.updatedAt of Contents is always wrong.
+            if (page.originalName === 'Contents') continue;
+            updatedTime = page.updatedAt;
+          }
+          if (!updatedTime) continue;
+    
+          // Load summary asynchronously
+          const blocks = await logseq.Editor.getPageBlocksTree(page.uuid);
+    
+          // Quick check for empty page
+          if (!blocks || blocks.length === 0) {
+            continue;
+          }
+    
+          await db.box.put({
+            graph: currentGraph,
+            name: page.originalName,
+            uuid: page.uuid,
+            time: updatedTime,
+            summary: [],
+            image: '',
+          });
+          // This is not accurate because of quick check above.
+          setLoadedCardCount(++counter);
+    
+          const [summary, image] = getSummary(blocks);
+          // Logseq has many meta pages that has no content. Skip them.
+          // Detailed check for emtpy page
+          if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+            // Update asynchronously
+            db.box.update([currentGraph, page.originalName], {
+              summary,
+              image,
+            });
+          }
+          else {
+            // Remove empty page
+            console.log(`Empty page: ${page.originalName}`);
+            db.box.delete([currentGraph, page.originalName]);
+          }
+          // LiveQuery needs some time to update.
+          if (counter % 100 === 99) {
+            await sleep(300);
+          }
+        }
+    
+        setLoading(false);
       }
     });
-  }, [currentGraph, fetchData]);
+  }, [currentDirHandle, currentGraph, preferredFormat]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
@@ -504,24 +502,21 @@ function App() {
     };
   }, [loading]);
 
-  const openDirectoryPicker = async () => {
+  const openDirectoryPicker = useCallback(async () => {
     const handle = await window.showDirectoryPicker();
     // Cannot get full path of the selected directory because of security reason.
     // Check only the directory name
     if (handle.name === 'pages') {
       dirHandles[currentGraph] = handle;
+      await db.box.where('graph').equals(currentGraph).delete();
       setCurrentDirHandle(handle);
+      setOpen(false);
+      // fetchData() is called when currentDirHandle is changed.
     }
     else {
       alert(t('please-select-pages'));
     }
-  };
-
-  const rebuildData = useCallback(async () => {
-    await db.box.where('graph').equals(currentGraph).delete();
-    fetchData();
-  }, [currentGraph, fetchData]);
-
+  }, [currentGraph, t]);
 
   const getBoxStyle = (index: number): CSSProperties => {
     const tile = document.getElementById('tile');
@@ -631,19 +626,20 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: 'block' }} onClick={() => rebuildData()}>
+          <button className='rebuild-btn' style={{ display: 'block' }} onClick={() => setOpen(true)}>
             {t("rebuild-btn")}
           </button>
+          <Dialog isOpen={open} onClose={() => setOpen(false)}>
+            <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
+              ({currentGraph.replace('logseq_local_', '')}/pages)
+            </div>
+            <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
+              {t("open-pages-btn")}
+            </button>
+          </Dialog>
         </div>
-      </div>
-      <div className='dir-not-selected' style={{ display: 'none' }}>
-        <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
-          ({currentGraph.replace('logseq_local_', '')}/pages)
-        </div>
-        <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
-          {t("open-pages-btn")}
-        </button>
-      </div> <div id='tile' style={{ display: 'flex' }}>
+      </div >
+      <div id='tile' style={{ display: 'flex' }}>
         {boxElements}
       </div>
       <div className='footer'>

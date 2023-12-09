@@ -1,0 +1,27 @@
+ .dialog {
+   padding: 0px;
+ }
+
+ .dialog::backdrop {
+   opacity: 0;
+   background: rgba(0, 0, 0, 0.5);
+ }
+
+ .dialog:modal::backdrop {
+   opacity: 1;
+   animation: fadein 0.15s ease-in;
+ }
+
+ @keyframes fadein {
+   0% {
+     opacity: 0;
+   }
+
+   100% {
+     opacity: 1;
+   }
+ }
+
+ .content {
+   padding: 1em;
+ }
