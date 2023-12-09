@@ -16,13 +16,8 @@ Any of the following:
   - (macOS) Cmd + Shift + Enter
  
 ![launch](./images/screen-launch.png)
-
-## Folder selection
-1. When you start Logseq and open CardBox, the folder selection screen shown below will appear.
-2. As instructed, select the pages folder under the folder where the current graph is saved. 
-3. After selection, only for the first time, the database rebuild process will start.
-
-![main](./images/screen-select-folder.png)
+	
+- Immediately after installation, CardBox will automatically build the database. During this time, the message "Building..." will appear in the upper left corner of the CardBox. Do not exit Logseq until this message disappears.
 
 ## Selecting a card
 - The thumbnail cards of the pages are ordered by the date of the last update, starting from the top left.
@@ -40,15 +35,15 @@ Any of the following:
 You need to restart Logseq for the language change to take effect.
 
 ## Limitations
-- Pages without body text are not displayed.
-  - Logseq does not create .md files for title-only pages without body text. This plugin reads the modification time of the .md file directly, so pages with no file cannot be displayed.
-- Logseq is currently in beta and cannot correctly manage page modification times. For this reason, this plugin needs a "Folder selection" operation to obtain the modification time.
-  - By the time Logseq v1.0 is released, the 'folder selection' operation will no longer be necessary.
+- CardBox will not display pages without body text.
+	- Logseq does not create a .md file for a page with only a title without body text. This plug-in reads the modification time of the .md file directly, so it cannot display pages with no file.
+- Since Logseq is currently in beta, it cannot correctly manage the modification time of pages. If the modification time is incorrect, please press the "Rebuild" button (it will get the modification time directly from the specified pages folder).
   - See https://github.com/logseq/logseq/issues/8556
-- The 'folder selection' operation is only required once for each graph when Logseq is launched.
 - Changes made directly to the .md file while Logseq is not running will not be reflected in the CardBox.
-  - To reflect them, you need to press the 'Rebuild' button.
-- Press the 'Rebuild' button after Re-index Logseq. If not you cannot open a page in the sidebar.
+	- To reflect them, press the 'Rebuild' button.
+- After executing the "Re-index" in Logseq, press the "Rebuild" button in the CardBox.
+  - If you do not rebuild, pages may not be displayed in the correct time order.
+  - If you do not rebuild, you cannot open the page in the sidebar from CardBox.
 
 # Support
 
