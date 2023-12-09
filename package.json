@@ -11,7 +11,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "release": "npm run build && rm -r release && mkdir release && cp -r dist release && cp -r images release && cp icon.png index.html LICENSE package.json README.md release"
+    "release": "npm run build && rm -r release && mkdir release && cp -r dist images release && cp icon.png LICENSE package.json README.md release"
   },
   "dependencies": {
     "@logseq/libs": "^0.0.15",
