@@ -243,7 +243,7 @@ function App() {
     });
   }, []);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
@@ -322,6 +322,8 @@ function App() {
       }
     });
   }, [currentDirHandle, currentGraph, preferredFormat]);
+
+  useEffect(() => fetchData(), [fetchData]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
@@ -625,7 +627,15 @@ function App() {
               close
             </span>
           </div>
-          <button className='rebuild-btn' style={{ display: 'block' }} onClick={() => setOpen(true)}>
+          <button className='rebuild-btn' style={{ display: loading ? 'block' : 'none' }} onClick={async () => { 
+            if (currentDirHandle) {
+              await db.box.where('graph').equals(currentGraph).delete();
+              fetchData();
+            }
+            else {
+              setOpen(true)
+            }
+          }}>
             {t("rebuild-btn")}
           </button>
           <Dialog isOpen={open} onClose={() => setOpen(false)}>
@@ -638,7 +648,7 @@ function App() {
           </Dialog>
         </div>
       </div >
-      <div id='tile' style={{ display: 'flex' }}>
+      <div id='tile'>
         {boxElements}
       </div>
       <div className='footer'>
