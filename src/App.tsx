@@ -39,7 +39,7 @@ const encodeLogseqFileName = (name: string) => {
   .replace(/\/$/, '') // Remove trailing slash
   .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)$/, '$1___')
   .replace(/\.$/, '.___')
-  .replace(/_\\_/g, '%5F___%5F')
+  .replace(/_\/_/g, '%5F___%5F')
   .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
     .replace(/:/g, '%3A')
@@ -59,7 +59,7 @@ const decodeLogseqFileName = (name: string) => {
   return name
     .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)___$/, '$1')
     .replace(/\.___$/, '.')
-    .replace(/%5F___%5F/g, '_\\_')
+    .replace(/%5F___%5F/g, '_/_')
     .replace(/%3C/g, '<')
     .replace(/%3E/g, '>')
     .replace(/%3A/g, ':')
@@ -277,6 +277,7 @@ function App() {
             promises.push((async () => {
               let updatedTime: number | undefined = 0;
               if (currentDirHandle) {
+                console.log("Original: " + page.originalName);
                 updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
               }
               else {
