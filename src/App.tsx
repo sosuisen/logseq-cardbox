@@ -277,7 +277,6 @@ function App() {
             promises.push((async () => {
               let updatedTime: number | undefined = 0;
               if (currentDirHandle) {
-                console.log("Original: " + page.originalName);
                 updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
               }
               else {
