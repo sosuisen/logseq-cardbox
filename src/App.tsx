@@ -33,10 +33,14 @@ function sleep(ms: number): Promise<void> {
 }
 
 const encodeLogseqFileName = (name: string) => {
-  // Encode characters that are not allowed in windows file name.
+  // Encode characters that are not allowed in file name.
   if (!name) return '';
   return name
-    .replace(/</g, '%3C')
+  .replace(/\/$/, '') // Remove trailing slash
+  .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)$/, '$1___')
+  .replace(/\.$/, '.___')
+  .replace(/_\\_/g, '%5F___%5F')
+  .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
     .replace(/:/g, '%3A')
     .replace(/"/g, '%22')
@@ -44,12 +48,18 @@ const encodeLogseqFileName = (name: string) => {
     .replace(/\\/g, '%5C')
     .replace(/\|/g, '%7C')
     .replace(/\?/g, '%3F')
-    .replace(/\*/g, '%2A');
+    .replace(/\*/g, '%2A')
+    .replace(/#/g, '%23');
 };
 
 const decodeLogseqFileName = (name: string) => {
   if (!name) return '';
+
+  // Cannot restore trailing slash because it is not saved in local file.
   return name
+    .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)___$/, '$1')
+    .replace(/\.___$/, '.')
+    .replace(/%5F___%5F/g, '_\\_')
     .replace(/%3C/g, '<')
     .replace(/%3E/g, '>')
     .replace(/%3A/g, ':')
@@ -58,7 +68,8 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%5C/g, '\\')
     .replace(/%7C/g, '|')
     .replace(/%3F/g, '?')
-    .replace(/%2A/g, '*');
+    .replace(/%2A/g, '*')
+    .replace(/%23/g, '#');
 };
 
 const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle, preferredFormat: MarkdownOrOrg): Promise<number> => {
@@ -335,8 +346,16 @@ function App() {
           console.log(`${operation}, ${fileName}, ${updatedTime}`);
 
           const originalName = decodeLogseqFileName(fileName);
+          // A trailing slash in the title cannot be recovered from the file name. 
+          // This is because they are removed during encoding.
           if (operation === 'modified') {
-            const blocks = await logseq.Editor.getPageBlocksTree(originalName);
+            const blocks = await logseq.Editor.getPageBlocksTree(originalName).catch(err => {
+              console.error(`Failed to get blocks: ${originalName}`);
+              console.error(err);
+              return null;
+            });
+            if (!blocks) return;
+            
             const [summary, image] = getSummary(blocks);
 
             if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {

@@ -44,6 +44,7 @@ You need to restart Logseq for the language change to take effect.
 - After executing the "Re-index" in Logseq, press the "Rebuild" button in the CardBox.
   - If you do not rebuild, pages may not be displayed in the correct time order.
   - If you do not rebuild, you cannot open the page in the sidebar from CardBox.
+- Pages with a slash at the end of the title (e.g. MyPage/ ) will not display correctly.
 
 # Support
 
