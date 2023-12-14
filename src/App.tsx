@@ -321,7 +321,7 @@ function App() {
             }
             promises.splice(0, promises.length);
             // LiveQuery needs some time to update.
-            await sleep(300);
+            await sleep(500);
           }
 
         }
