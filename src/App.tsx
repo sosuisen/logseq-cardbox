@@ -18,6 +18,10 @@ type ParentBlocks =
     index: number;
   };
 
+type SearchResultPage = string[];
+
+type PrimaryKey = [string, string];
+
 type FileChanges = {
   blocks: BlockEntity[];
   txData: IDatom[];
@@ -36,11 +40,11 @@ const encodeLogseqFileName = (name: string) => {
   // Encode characters that are not allowed in file name.
   if (!name) return '';
   return name
-  .replace(/\/$/, '') // Remove trailing slash
-  .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)$/, '$1___')
-  .replace(/\.$/, '.___')
-  .replace(/_\/_/g, '%5F___%5F')
-  .replace(/</g, '%3C')
+    .replace(/\/$/, '') // Remove trailing slash
+    .replace(/^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9)$/, '$1___')
+    .replace(/\.$/, '.___')
+    .replace(/_\/_/g, '%5F___%5F')
+    .replace(/</g, '%3C')
     .replace(/>/g, '%3E')
     .replace(/:/g, '%3A')
     .replace(/"/g, '%22')
@@ -224,16 +228,46 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedBox, setSelectedBox] = useState<number>(0);
   const [open, setOpen] = useState<boolean>(false);
+  const [filteredPages, setFilteredPages] = useState<PrimaryKey[]>([]);
+  const [tag, setTag] = useState<string>('');
 
   const { t } = useTranslation();
 
   const cardboxes = useLiveQuery(
-    () => db.box
-      .orderBy('time')
-      .reverse()
-      .filter(box => box.graph === currentGraph)
-      .toArray()
-    , [currentGraph]);
+    () => {
+      console.log(filteredPages);
+      if (filteredPages.length === 0) {
+        return db.box
+          .orderBy('time')
+          .reverse()
+          .filter(box => box.graph === currentGraph)
+          .toArray()
+      }
+      else {
+        return db.box
+          .where(':id')
+          .anyOf(filteredPages)
+          .reverse()
+          .sortBy('time')
+      }
+    }
+    , [currentGraph, filteredPages]);
+
+
+  useEffect(() => {
+    const filter = async (tag: string) => {
+      const pageEntries: SearchResultPage[] = await logseq.DB.datascriptQuery(`
+      [:find ?name
+        :where
+        [?t :block/name "${tag}"]
+        [?p :block/tags ?t]
+        [?p :block/original-name ?name]]
+      `);
+      console.log(pageEntries);
+      setFilteredPages(pageEntries.map(entry => [currentGraph, entry[0]]));
+    };
+    filter(tag);
+  }, [tag, currentGraph]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -355,7 +389,7 @@ function App() {
               return null;
             });
             if (!blocks) return;
-            
+
             const [summary, image] = getSummary(blocks);
 
             if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
@@ -633,6 +667,10 @@ function App() {
           <div className='card-number'>
             {cardboxes?.length ?? 0} cards
           </div>
+          <div className='tag-label'>
+            Tag:
+          </div>
+          <input className='tag-input' type='text' value={tag} onChange={e => setTag(e.target.value)} />
         </div>
         <div className='control-center'>
           <div className='cardbox-title'>CardBox</div>
