@@ -285,19 +285,22 @@ function App() {
 
   useEffect(() => {
     const filter = async (tag: string) => {
+      if (tag === '') {
+        setMaxBoxNumber(pagenationBaseSize);
+        setFilteredPages([]);
+        return;
+      }
+
       const pageEntries: SearchResultPage[] = await logseq.DB.datascriptQuery(`
       [:find ?name
         :where
-        [?t :block/name "${tag}"]
+        [?t :block/name ?namePattern]
+        [(clojure.string/starts-with? ?namePattern "${tag}")]
         [?p :block/tags ?t]
         [?p :block/original-name ?name]]
       `);
       console.log(pageEntries);
-      if (tag === '') {
-        setMaxBoxNumber(pagenationBaseSize);
-        setFilteredPages([]);
-      }
-      else if (pageEntries.length === 0) {
+      if (pageEntries.length === 0) {
         setFilteredPages([["", ""]]);
         return;
       }
