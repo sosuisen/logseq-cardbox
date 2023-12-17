@@ -266,6 +266,13 @@ function App() {
         [?p :block/original-name ?name]]
       `);
       console.log(pageEntries);
+      if (tag === '') {
+        setFilteredPages([]);
+      }
+      else if (pageEntries.length === 0) {
+        setFilteredPages([["", ""]]);
+        return;
+      }
       setFilteredPages(pageEntries.map(entry => [currentGraph, entry[0]]));
     };
     filter(tag);
