@@ -126,12 +126,14 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 
       if (Object.prototype.hasOwnProperty.call(block, 'id')) {
         let content = (block as BlockEntity).content.substring(0, max);
-        if (parentStack.length > 1) {
-          content = '  '.repeat(parentStack.length - 1) + '* ' + content;
+        // skip property
+        if(!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
+          if (parentStack.length > 1) {
+            content = '  '.repeat(parentStack.length - 1) + '* ' + content;
+          }
+          total += content.length;
+          summary.push(content);
         }
-        total += content.length;
-        summary.push(content);
-
         if ((block as BlockEntity).children && (block as BlockEntity).children!.length > 0) {
           parentStack.push({
             blocks: (block as BlockEntity).children!,
