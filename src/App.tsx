@@ -1,4 +1,4 @@
-import { CSSProperties, useCallback, useEffect, useState } from 'react'
+import { CSSProperties, useCallback, useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
@@ -221,6 +221,9 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
+const pagenationBaseSize = 150;
+const pagenationRowSize = 20;
+const pagenationScrollHeight = 150;
 
 function App() {
   const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
@@ -232,17 +235,19 @@ function App() {
   const [open, setOpen] = useState<boolean>(false);
   const [filteredPages, setFilteredPages] = useState<PrimaryKey[]>([]);
   const [tag, setTag] = useState<string>('');
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const [maxBoxNumber, setMaxBoxNumber] = useState<number>(pagenationBaseSize);
 
   const { t } = useTranslation();
 
   const cardboxes = useLiveQuery(
     () => {
-      console.log(filteredPages);
       if (filteredPages.length === 0) {
         return db.box
           .orderBy('time')
-          .reverse()
           .filter(box => box.graph === currentGraph)
+          .reverse()
+          .limit(maxBoxNumber)
           .toArray()
       }
       else {
@@ -253,7 +258,29 @@ function App() {
           .sortBy('time')
       }
     }
-    , [currentGraph, filteredPages]);
+    , [currentGraph, filteredPages, maxBoxNumber]);
+
+    
+  useEffect(() => {
+    const handleScroll = () => {
+      // スクロールイベントの処理
+      console.log('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
+      const limit = pagenationBaseSize + pagenationRowSize * Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight);
+      setMaxBoxNumber(current => current < limit ? limit : current);
+    };
+
+    const tileElement = tileRef.current;
+    if (tileElement) {
+      tileElement.addEventListener('scroll', handleScroll);
+    }
+
+    // コンポーネントのアンマウント時にイベントリスナーを削除
+    return () => {
+      if (tileElement) {
+        tileElement.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -267,6 +294,7 @@ function App() {
       `);
       console.log(pageEntries);
       if (tag === '') {
+        setMaxBoxNumber(pagenationBaseSize);
         setFilteredPages([]);
       }
       else if (pageEntries.length === 0) {
@@ -711,7 +739,7 @@ function App() {
           </Dialog>
         </div>
       </div >
-      <div id='tile'>
+      <div id='tile' ref={tileRef}>
         {boxElements}
       </div>
       <div className='footer'>
