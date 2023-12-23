@@ -72,6 +72,7 @@
   display: grid;
   grid-auto-rows: 160px;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  overflow-y: auto;
 }
 
 .box {
