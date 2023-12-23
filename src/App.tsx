@@ -1,3 +1,4 @@
+import { logger } from './logger'; // logger.tsからロガーをインポート
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
@@ -83,15 +84,15 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
 
   let fileHandle = await handle.getFileHandle(path).catch(() => {
     // Logseq does not save an empty page as a local file.
-    console.log(`Failed to get file handle: ${path}`);
+    logger.debug(`Failed to get file handle: ${path}`);
     return null;
   });
   if (!fileHandle) {
     path = fileName + (preferredFormat === 'markdown' ? '.org' : '.md');
-    console.log(`Retry: ${path}`);
+    logger.debug(`Retry: ${path}`);
     fileHandle = await handle.getFileHandle(path).catch(() => {
       // Logseq does not save an empty page as a local file.
-      console.log(`Failed to get file handle: ${path}`);
+      logger.debug(`Failed to get file handle: ${path}`);
       return null;
     });
   }
@@ -171,7 +172,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
         const ma = (block as BlockEntity).content.match(/[[(]..\/assets\/(.+\.(png|jpg|jpeg))[\])]/i);
         if (ma) {
           image = ma[1];
-          // console.log("asset: " + ma[1]);
+          // logger.debug("asset: " + ma[1]);
           break;
         }
         //            summary.push(content);
@@ -191,7 +192,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 const parseOperation = (changes: FileChanges): [Operation, string] => {
   let operation: Operation = '';
   let originalName = '';
-  // console.log(changes);
+  // logger.debug(changes);
   for (const block of changes.blocks) {
     if (Object.prototype.hasOwnProperty.call(block, 'path')) {
       if (changes.txData.length === 0) continue;
@@ -205,7 +206,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
 
           operation = 'modified';
 
-          // console.log("File modified: " + originalName);
+          // logger.debug("File modified: " + originalName);
 
           return [operation, originalName];
         }
@@ -221,7 +222,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
         createOrDelete = 'delete';
       }
       else {
-        console.log(`created, ${originalName}`);
+        logger.debug(`created, ${originalName}`);
       }
       operation = createOrDelete;
 
@@ -276,7 +277,7 @@ function App() {
     
   useEffect(() => {
     const handleScroll = () => {
-      // console.log('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
+      // logger.debug('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
 
       const loadScreensAhead = 3;
       const loadRowsAhead = loadScreensAhead * tileRowSize;
@@ -312,7 +313,7 @@ function App() {
 
       setTileRowSize(rowsInAScreen);
 
-      console.log(columnSize, rowsInAScreen);
+      // logger.debug(columnSize, rowsInAScreen);
 
       const scrollRow = Math.floor(tileRef.current!.scrollTop / tileGridHeight) + 1;
       const limit = columnSize * (rowsInAScreen + scrollRow);
@@ -345,7 +346,7 @@ function App() {
         [?p :block/tags ?t]
         [?p :block/original-name ?name]]
       `);
-      // console.log(pageEntries);
+      // logger.debug(pageEntries);
       if (pageEntries.length === 0) {
         setFilteredPages([["", ""]]);
         return;
@@ -460,7 +461,7 @@ function App() {
       // Ignore create event because the file is not created yet.
       if (operation == 'modified' || operation == 'delete') {
         const updatedTime = new Date().getTime();
-        console.log(`${operation}, ${originalName}, ${updatedTime}`);
+        logger.debug(`${operation}, ${originalName}, ${updatedTime}`);
 
         // A trailing slash in the title cannot be recovered from the file name. 
         // This is because they are removed during encoding.
@@ -500,7 +501,7 @@ function App() {
           }
           else {
             // Remove empty page
-            console.log(`Empty page: ${originalName}`);
+            logger.debug(`Empty page: ${originalName}`);
             db.box.delete([currentGraph, originalName]);
           }
         }
@@ -508,7 +509,7 @@ function App() {
           db.box.delete([currentGraph, originalName]);
         }
         else {
-          console.log('Unknown operation: ' + operation);
+          logger.debug('Unknown operation: ' + operation);
         }
 
       }
