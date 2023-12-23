@@ -190,33 +190,46 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 
 const parseOperation = (changes: FileChanges): [Operation, string] => {
   let operation: Operation = '';
-  let path = '';
+  let originalName = '';
+  // console.log(changes);
   for (const block of changes.blocks) {
     if (Object.prototype.hasOwnProperty.call(block, 'path')) {
       if (changes.txData.length === 0) continue;
-      if (changes.txData[0][1] === 'lastModifiedAt') {
-        operation = 'modified';
-        path = block.path;
-        console.log("File modified: " + block.path);
-        break;
-      }
-    }
-  }
-  if (operation === '') {
-    for (const data of changes.txData) {
-      if (data.length === 5 && data[1] === 'path') {
-        path = data[2];
-        let createOrDelete: Operation = 'create';
-        if (data[4] === false) {
-          createOrDelete = 'delete';
+      if (changes.txData[0][1] === 'file/last-modified-at') {
+        const path = block.path;
+        const ma = path.match(/pages\/(.*)\.(md|org)/);
+        if (ma) {
+          const fileName = ma[1];
+
+          originalName = decodeLogseqFileName(fileName);
+
+          operation = 'modified';
+
+          // console.log("File modified: " + originalName);
+
+          return [operation, originalName];
         }
-        operation = createOrDelete;
-        console.log(`File ${createOrDelete}: ${path}`);
-        break;
       }
     }
   }
-  return [operation, path];
+
+  for (const data of changes.txData) {
+    if (data.length === 5 && data[1] === 'block/original-name') {
+      originalName = data[2];
+      let createOrDelete: Operation = 'create';
+      if (data[4] === false) {
+        createOrDelete = 'delete';
+      }
+      else {
+        console.log(`created, ${originalName}`);
+      }
+      operation = createOrDelete;
+
+      return [operation, originalName];
+    }
+  }
+
+  return [operation, originalName];
 };
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
@@ -409,66 +422,62 @@ function App() {
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
-      const [operation, path] = parseOperation(changes);
+      const [operation, originalName] = parseOperation(changes);
 
       // Ignore create event because the file is not created yet.
       if (operation == 'modified' || operation == 'delete') {
-        const ma = path.match(/pages\/(.*)\.(md|org)/);
-        if (ma) {
-          const fileName = ma[1];
-          const updatedTime = new Date().getTime();
-          console.log(`${operation}, ${fileName}, ${updatedTime}`);
+        const updatedTime = new Date().getTime();
+        console.log(`${operation}, ${originalName}, ${updatedTime}`);
 
-          const originalName = decodeLogseqFileName(fileName);
-          // A trailing slash in the title cannot be recovered from the file name. 
-          // This is because they are removed during encoding.
-          if (operation === 'modified') {
-            const blocks = await logseq.Editor.getPageBlocksTree(originalName).catch(err => {
-              console.error(`Failed to get blocks: ${originalName}`);
-              console.error(err);
-              return null;
-            });
-            if (!blocks) return;
+        // A trailing slash in the title cannot be recovered from the file name. 
+        // This is because they are removed during encoding.
+        if (operation === 'modified') {
+          const blocks = await logseq.Editor.getPageBlocksTree(originalName).catch(err => {
+            console.error(`Failed to get blocks: ${originalName}`);
+            console.error(err);
+            return null;
+          });
+          if (!blocks) return;
 
-            const [summary, image] = getSummary(blocks);
+          const [summary, image] = getSummary(blocks);
 
-            if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
-              const box = await db.box.get([currentGraph, originalName]);
-              if (box) {
-                db.box.update([currentGraph, originalName], {
+          if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+            const box = await db.box.get([currentGraph, originalName]);
+            if (box) {
+              db.box.update([currentGraph, originalName], {
+                time: updatedTime,
+                summary,
+                image,
+              });
+            }
+            else {
+              // create
+              const page = await logseq.Editor.getPage(originalName);
+              if (page) {
+                db.box.put({
+                  graph: currentGraph,
+                  name: originalName,
+                  uuid: page.uuid,
                   time: updatedTime,
                   summary,
                   image,
-                });
-              }
-              else {
-                // create
-                const page = await logseq.Editor.getPage(originalName);
-                if (page) {
-                  db.box.put({
-                    graph: currentGraph,
-                    name: originalName,
-                    uuid: page.uuid,
-                    time: updatedTime,
-                    summary,
-                    image,
-                  })
-                }
+                })
               }
             }
-            else {
-              // Remove empty page
-              console.log(`Empty page: ${originalName}`);
-              db.box.delete([currentGraph, originalName]);
-            }
-          }
-          else if (operation === 'delete') {
-            db.box.delete([currentGraph, originalName]);
           }
           else {
-            console.log('Unknown operation: ' + operation);
+            // Remove empty page
+            console.log(`Empty page: ${originalName}`);
+            db.box.delete([currentGraph, originalName]);
           }
         }
+        else if (operation === 'delete') {
+          db.box.delete([currentGraph, originalName]);
+        }
+        else {
+          console.log('Unknown operation: ' + operation);
+        }
+
       }
     };
 
