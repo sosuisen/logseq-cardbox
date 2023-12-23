@@ -69,10 +69,9 @@
   height: 92%;
   padding-left: 24px;
   padding-right: 24px;
-  display: flex;
-  flex-wrap: wrap;
-  overflow-y: auto;
-  align-content: flex-start;
+  display: grid;
+  grid-auto-rows: 160px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
 
 .box {
