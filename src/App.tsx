@@ -234,9 +234,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
-const pagenationBaseSize = 150;
-const pagenationRowSize = 20;
-const pagenationScrollHeight = 150;
+const tileGridHeight = 160; // height of a grid row
 
 function App() {
   const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
@@ -249,7 +247,9 @@ function App() {
   const [filteredPages, setFilteredPages] = useState<PrimaryKey[]>([]);
   const [tag, setTag] = useState<string>('');
   const tileRef = useRef<HTMLDivElement | null>(null);
-  const [maxBoxNumber, setMaxBoxNumber] = useState<number>(pagenationBaseSize);
+  const [tileColumnSize, setTileColumnSize] = useState<number>(0);
+  const [tileRowSize, setTileRowSize] = useState<number>(0);
+  const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
 
   const { t } = useTranslation();
 
@@ -276,9 +276,13 @@ function App() {
     
   useEffect(() => {
     const handleScroll = () => {
-      // スクロールイベントの処理
-      console.log('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
-      const limit = pagenationBaseSize + pagenationRowSize * Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight);
+      // console.log('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
+
+      const loadScreensAhead = 3;
+      const loadRowsAhead = loadScreensAhead * tileRowSize;
+      const loadRowsByScroll = (Math.floor(Math.floor(tileRef.current!.scrollTop / tileGridHeight) / loadRowsAhead) + 1 ) * loadRowsAhead;
+      const limit = tileColumnSize * (tileRowSize + loadRowsByScroll);
+
       setMaxBoxNumber(current => current < limit ? limit : current);
     };
 
@@ -293,13 +297,42 @@ function App() {
         tileElement.removeEventListener('scroll', handleScroll);
       }
     };
+  }, [tileRowSize, tileColumnSize]);
+
+  useEffect(() => {
+    tileRef.current!.style.gridAutoRows = `${tileGridHeight}px`;
+
+    const handleResize = () => {
+      const gridStyles = window.getComputedStyle(tileRef.current!);
+      const columnSize = gridStyles.gridTemplateColumns.split(' ').length;
+      setTileColumnSize(columnSize);
+
+      // const rowSize = gridStyles.gridTemplateRows.split(' ').length; // This gets all rows in tile grid
+      const rowsInAScreen = Math.ceil(tileRef.current!.offsetHeight / tileGridHeight);
+
+      setTileRowSize(rowsInAScreen);
+
+      console.log(columnSize, rowsInAScreen);
+
+      const scrollRow = Math.floor(tileRef.current!.scrollTop / tileGridHeight) + 1;
+      const limit = columnSize * (rowsInAScreen + scrollRow);
+      
+      setMaxBoxNumber(current => current < limit ? limit : current);
+    };
+    handleResize(); // call once after render tile
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+  
 
 
   useEffect(() => {
     const filter = async (tag: string) => {
       if (tag === '') {
-        setMaxBoxNumber(pagenationBaseSize);
+        // setMaxBoxNumber(pagenationBaseSize);
         setFilteredPages([]);
         return;
       }
@@ -312,7 +345,7 @@ function App() {
         [?p :block/tags ?t]
         [?p :block/original-name ?name]]
       `);
-      console.log(pageEntries);
+      // console.log(pageEntries);
       if (pageEntries.length === 0) {
         setFilteredPages([["", ""]]);
         return;
@@ -582,17 +615,8 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    const handleResize = () => {
-      const tile = document.getElementById('tile');
-      if (!tile?.hasChildNodes()) {
-        return;
-      }
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
     };
   }, [loading]);
 
