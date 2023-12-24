@@ -375,7 +375,7 @@ function App() {
     });
   }, []);
 
-  const fetchData = useCallback(() => {
+  const rebuildDB = useCallback(() => {
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
@@ -452,7 +452,7 @@ function App() {
     });
   }, [currentDirHandle, currentGraph, preferredFormat]);
 
-  useEffect(() => fetchData(), [fetchData]);
+  useEffect(() => rebuildDB(), [rebuildDB]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
@@ -630,7 +630,7 @@ function App() {
       await db.box.where('graph').equals(currentGraph).delete();
       setCurrentDirHandle(handle);
       setOpen(false);
-      // fetchData() is called when currentDirHandle is changed.
+      // rebuildDB() is called when currentDirHandle is changed.
     }
     else {
       alert(t('please-select-pages'));
@@ -705,7 +705,7 @@ function App() {
           <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
-              fetchData();
+              rebuildDB();
             }
             else {
               setOpen(true)
