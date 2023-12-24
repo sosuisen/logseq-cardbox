@@ -251,6 +251,7 @@ function App() {
   const [tileColumnSize, setTileColumnSize] = useState<number>(0);
   const [tileRowSize, setTileRowSize] = useState<number>(0);
   const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
+  const [totalCardNumber, setTotalCardNumber] = useState<number>(0);
 
   const { t } = useTranslation();
 
@@ -376,9 +377,12 @@ function App() {
   }, []);
 
   const rebuildDB = useCallback(() => {
+    if (!currentGraph) return;
+
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
+        setTotalCardNumber(count);
       }
       else {
         setLoading(true);
@@ -434,13 +438,17 @@ function App() {
               }
             })());
           }
-          if (!page || promises.length >= 100) {
+          const loadingCardNumber = promises.length;
+          if (!page || loadingCardNumber >= 100) {
             try {
               await Promise.all(promises);
             } catch (err) {
               console.error(err);
             }
-            promises.splice(0, promises.length);
+            promises.splice(0, loadingCardNumber);
+
+            setTotalCardNumber(await db.box.where('graph').equals(currentGraph).count());
+        
             // LiveQuery needs some time to update.
             await sleep(500);
           }
@@ -686,7 +694,7 @@ function App() {
             {t("loading")}
           </div>
           <div className='card-number'>
-            {cardboxes?.length ?? 0} cards
+            {totalCardNumber} cards
           </div>
           <div className='tag-label'>
             Tag:
