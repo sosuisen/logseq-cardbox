@@ -15,7 +15,13 @@
     "release": "npm run build && rm -r release && mkdir release && cp -r dist images release && cp icon.png LICENSE package.json README.md release"
   },
   "dependencies": {
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "@fontsource/noto-sans-jp": "^5.0.17",
+    "@fontsource/roboto": "^5.0.8",
     "@logseq/libs": "^0.0.15",
+    "@mui/icons-material": "^5.15.2",
+    "@mui/material": "^5.15.2",
     "date-fns": "^2.30.0",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",

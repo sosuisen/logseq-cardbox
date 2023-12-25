@@ -1,7 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import './index.css'
+import "@fontsource/roboto"
+import "@fontsource/roboto/700.css"
+import '@fontsource/noto-sans-jp'
+import '@fontsource/noto-sans-jp/700.css'
+import './main.css'
 import '@logseq/libs'
 import './i18n/configs';
 import { SimpleCommandKeybinding } from '@logseq/libs/dist/LSPlugin'
