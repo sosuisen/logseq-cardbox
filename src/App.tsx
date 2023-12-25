@@ -8,6 +8,8 @@ import { db, Box } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Dialog } from './Dialog';
+import { Button, IconButton, InputAdornment, TextField } from '@mui/material';
+import { Clear } from '@mui/icons-material';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
@@ -132,7 +134,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
       if (Object.prototype.hasOwnProperty.call(block, 'id')) {
         let content = (block as BlockEntity).content.substring(0, max);
         // skip property
-        if(!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
+        if (!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
           if (parentStack.length > 1) {
             content = '  '.repeat(parentStack.length - 1) + '* ' + content;
           }
@@ -275,14 +277,14 @@ function App() {
     }
     , [currentGraph, filteredPages, maxBoxNumber]);
 
-    
+
   useEffect(() => {
     const handleScroll = () => {
       // logger.debug('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
 
       const loadScreensAhead = 3;
       const loadRowsAhead = loadScreensAhead * tileRowSize;
-      const loadRowsByScroll = (Math.floor(Math.floor(tileRef.current!.scrollTop / tileGridHeight) / loadRowsAhead) + 1 ) * loadRowsAhead;
+      const loadRowsByScroll = (Math.floor(Math.floor(tileRef.current!.scrollTop / tileGridHeight) / loadRowsAhead) + 1) * loadRowsAhead;
       const limit = tileColumnSize * (tileRowSize + loadRowsByScroll);
 
       setMaxBoxNumber(current => current < limit ? limit : current);
@@ -318,7 +320,7 @@ function App() {
 
       const scrollRow = Math.floor(tileRef.current!.scrollTop / tileGridHeight) + 1;
       const limit = columnSize * (rowsInAScreen + scrollRow);
-      
+
       setMaxBoxNumber(current => current < limit ? limit : current);
     };
     handleResize(); // call once after render tile
@@ -328,7 +330,7 @@ function App() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
-  
+
 
 
   useEffect(() => {
@@ -448,7 +450,7 @@ function App() {
             promises.splice(0, loadingCardNumber);
 
             setTotalCardNumber(await db.box.where('graph').equals(currentGraph).count());
-        
+
             // LiveQuery needs some time to update.
             await sleep(500);
           }
@@ -690,27 +692,7 @@ function App() {
     <>
       <div className='control'>
         <div className='control-left'>
-          <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
-            {t("loading")}
-          </div>
-          <div className='card-number'>
-            {totalCardNumber} cards
-          </div>
-          <div className='tag-label'>
-            Tag:
-          </div>
-          <input className='tag-input' type='text' value={tag} onChange={e => setTag(e.target.value)} />
-        </div>
-        <div className='control-center'>
-          <div className='cardbox-title'>CardBox</div>
-        </div>
-        <div className='control-right'>
-          <div className='close-btn' onClick={() => logseq.hideMainUI()}>
-            <span className='material-symbols-outlined'>
-              close
-            </span>
-          </div>
-          <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => {
+          <Button variant="outlined" style={{ display: loading ? 'none' : 'block', marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
               rebuildDB();
@@ -718,9 +700,7 @@ function App() {
             else {
               setOpen(true)
             }
-          }}>
-            {t("rebuild-btn")}
-          </button>
+          }}>{t("rebuild-btn")}</Button>
           <Dialog isOpen={open} onClose={() => setOpen(false)}>
             <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
               ({currentGraph.replace('logseq_local_', '')}/pages)
@@ -729,6 +709,41 @@ function App() {
               {t("open-pages-btn")}
             </button>
           </Dialog>
+          <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
+            {t("loading")}
+          </div>
+          <div className='card-number'>
+            {totalCardNumber} cards
+          </div>
+          <TextField id="tag-input" size='small' label="Filter by Page Tag" variant="filled"
+            style={{ marginLeft: "12px", marginTop: "3px" }}
+            value={tag} onChange={e => setTag(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setTag('')}
+                    edge="end"
+                  >
+                    <Clear />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </div>
+        <div className='control-center'>
+          
+        </div>
+        <div className='control-right'>
+          <Clear className='clear-btn' onClick={() => logseq.hideMainUI()} 
+            style={{
+              cursor: "pointer",
+              float: "right",
+              marginTop: "10px",
+              marginRight: "24px",
+            }}
+          />
         </div>
       </div >
       <div id='tile' ref={tileRef}>

@@ -13,9 +13,13 @@
 
 .control {
   margin-top: 7px;
-  height: 40px;
+  height: 60px;
   display: grid;
   grid-template-columns: 1fr 110px 1fr;
+}
+
+.control-center {
+  width: 300px;  
 }
 
 .loading {
@@ -24,6 +28,7 @@
   margin-left: 24px;
   margin-top: 7px;
   float:left;
+  font-size: 24px;
 }
 
 .card-number {
@@ -31,36 +36,25 @@
   margin-left: 24px;
   margin-top: 7px;
   float:left;
+  font-size: 24px;
 }
 
 .cardbox-title {
-  font-size: 24px;
   width: 110px;
 }
 
 .rebuild-btn {
-  float: right;
+  float: left;
   margin-right: 24px;
   margin-top: 4px;
   height: 32px;
-}
-
-.close-btn {
-  cursor: pointer;
-  float: right;
-  margin-top: 4px;
-  margin-right: 24px;
-  height: 32px;
-  width: 32px;
 }
 
 .open-pages-btn {
-  font-size: 24px;
   margin-top: 24px;
 }
 
 .open-pages-btn-label {
-  font-size: 24px;
   margin-top: 24px;
   margin-left: 5px;
 }
@@ -144,6 +138,4 @@
 
 .tag-input {
   float: left;
-  margin-top: 11px;
-  margin-left: 7px;
 }
