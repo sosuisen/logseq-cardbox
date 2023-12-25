@@ -19,35 +19,29 @@
 }
 
 .control-center {
-  width: 300px;  
+  width: 300px;
 }
 
 .loading {
-  color: #900000;
+  color: rgba(144, 0, 0, 0.7);
   text-align: left;
   margin-left: 24px;
   margin-top: 7px;
-  float:left;
+  float: left;
   font-size: 24px;
 }
 
 .card-number {
+  color: rgba(0, 0, 0, 0.7);
   text-align: left;
   margin-left: 24px;
   margin-top: 7px;
-  float:left;
+  float: left;
   font-size: 24px;
 }
 
 .cardbox-title {
   width: 110px;
-}
-
-.rebuild-btn {
-  float: left;
-  margin-right: 24px;
-  margin-top: 4px;
-  height: 32px;
 }
 
 .open-pages-btn {
@@ -122,6 +116,7 @@
 }
 
 .footer {
+  color: rgba(0, 0, 0, 0.7);
   font-size: 14px;
   position: absolute;
   width: 100%;

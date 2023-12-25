@@ -692,7 +692,7 @@ function App() {
     <>
       <div className='control'>
         <div className='control-left'>
-          <Button variant="outlined" style={{ display: loading ? 'none' : 'block', marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
+          <Button variant="outlined" style={{ display: loading ? 'none' : 'block', color: "black", float: "left", borderColor: "black", marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
               rebuildDB();
@@ -733,10 +733,10 @@ function App() {
           />
         </div>
         <div className='control-center'>
-          
+
         </div>
         <div className='control-right'>
-          <Clear className='clear-btn' onClick={() => logseq.hideMainUI()} 
+          <Clear className='clear-btn' onClick={() => logseq.hideMainUI()}
             style={{
               cursor: "pointer",
               float: "right",
