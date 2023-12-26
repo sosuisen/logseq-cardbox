@@ -715,7 +715,7 @@ function App() {
             {t("loading")}
           </div>
           <div className='card-number'>
-            {totalCardNumber} cards
+            {filteredPages.length === 0 ? totalCardNumber : cardboxes?.length} cards
           </div>
           <TextField id="tag-input" size='small' label="Filter by Page Tag" variant="filled"
             style={{ marginLeft: "12px", marginTop: "3px" }}
