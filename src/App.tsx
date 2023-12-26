@@ -252,6 +252,7 @@ function App() {
   const [filteredPages, setFilteredPages] = useState<PrimaryKey[]>([]);
   const [tag, setTag] = useState<string>('');
   const tileRef = useRef<HTMLDivElement | null>(null);
+  const tagInputFieldRef = useRef<HTMLInputElement | null>(null);
   const [tileColumnSize, setTileColumnSize] = useState<number>(0);
   const [tileRowSize, setTileRowSize] = useState<number>(0);
   const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
@@ -304,6 +305,28 @@ function App() {
       }
     };
   }, [tileRowSize, tileColumnSize]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: { key: string; }) => {
+      switch (e.key) {
+        case "Escape":
+          if (filteredPages.length === 0) {
+            logseq.hideMainUI();
+          }
+          else {
+            setTag('');
+          }
+          break;
+        default:
+          return;
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [filteredPages]);
 
   useEffect(() => {
     tileRef.current!.style.gridAutoRows = `${tileGridHeight}px`;
@@ -555,6 +578,7 @@ function App() {
       const cols = Math.floor(tileWidth / boxWidth);
       const rows = Math.floor(tileHeight / boxHeight);
       if (e.key === 'ArrowUp') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox - cols;
           if (newIndex < 0) {
@@ -569,6 +593,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowDown') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox + cols;
           if (newIndex >= tile!.childElementCount) {
@@ -583,6 +608,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowRight') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox + 1;
           if (newIndex >= tile!.childElementCount) {
@@ -598,6 +624,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowLeft') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox - 1;
           if (newIndex < 0) {
@@ -613,6 +640,10 @@ function App() {
         });
       }
       else if (e.key === 'Enter') {
+        if (tagInputFieldRef.current && tagInputFieldRef.current === document.activeElement) {
+          return;
+        }
+
         const box = (document.getElementsByClassName('selectedBox')[0] as HTMLElement);
         if (e.shiftKey) {
           logseq.Editor.openInRightSidebar(box.id);
@@ -720,6 +751,7 @@ function App() {
           <TextField id="tag-input" size='small' label="Filter by Page Tag" variant="filled"
             style={{ marginLeft: "12px", marginTop: "3px" }}
             value={tag} onChange={e => setTag(e.target.value)}
+            inputRef={tagInputFieldRef}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -731,6 +763,9 @@ function App() {
                   </IconButton>
                 </InputAdornment>
               ),
+              inputProps: {
+                tabIndex: 1,
+              },
             }}
           />
         </div>
@@ -748,7 +783,7 @@ function App() {
           />
         </div>
       </div >
-      <div id='tile' ref={tileRef}>
+      <div id='tile' ref={tileRef} tabIndex={2}>
         {boxElements}
       </div>
       <div className='footer'>
