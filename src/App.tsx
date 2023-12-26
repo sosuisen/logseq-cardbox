@@ -694,7 +694,7 @@ function App() {
     <>
       <div className='control'>
         <div className='control-left'>
-          <Button variant="outlined" style={{ display: loading ? 'none' : 'block', color: "black", float: "left", borderColor: "black", marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
+          <Button variant="outlined" tabIndex={-1} style={{ display: loading ? 'none' : 'block', color: "black", float: "left", borderColor: "black", marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
               rebuildDB();
