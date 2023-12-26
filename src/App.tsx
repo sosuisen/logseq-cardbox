@@ -56,7 +56,8 @@ const encodeLogseqFileName = (name: string) => {
     .replace(/\|/g, '%7C')
     .replace(/\?/g, '%3F')
     .replace(/\*/g, '%2A')
-    .replace(/#/g, '%23');
+    .replace(/#/g, '%23')
+    .replace(/^\./, '%2E');
 };
 
 const decodeLogseqFileName = (name: string) => {
@@ -76,7 +77,8 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%7C/g, '|')
     .replace(/%3F/g, '?')
     .replace(/%2A/g, '*')
-    .replace(/%23/g, '#');
+    .replace(/%23/g, '#')
+    .replace(/%2E/g, '.');
 };
 
 const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle, preferredFormat: MarkdownOrOrg): Promise<number> => {
