@@ -252,7 +252,7 @@ function App() {
   const [tag, setTag] = useState<string>('');
   const tileRef = useRef<HTMLDivElement | null>(null);
   const tagInputFieldRef = useRef<HTMLInputElement | null>(null);
-//  const appRef = useRef<HTMLDivElement | null>(null);
+  //  const appRef = useRef<HTMLDivElement | null>(null);
   const [tileColumnSize, setTileColumnSize] = useState<number>(0);
   const [tileRowSize, setTileRowSize] = useState<number>(0);
   const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
@@ -310,12 +310,7 @@ function App() {
     const handleKeyDown = (e: { key: string; }) => {
       switch (e.key) {
         case "Escape":
-          if (filteredPages.length === 0) {
-            logseq.hideMainUI();
-          }
-          else {
-            setTag('');
-          }
+          logseq.hideMainUI({ restoreEditingCursor: true });
           break;
         default:
           return;
@@ -360,6 +355,8 @@ function App() {
 
   useEffect(() => {
     const filter = async (tag: string) => {
+      setSelectedBox(0);
+
       if (tag === '') {
         // setMaxBoxNumber(pagenationBaseSize);
         setFilteredPages([]);
@@ -653,7 +650,10 @@ function App() {
             name: box.getElementsByClassName('box-title')[0].innerHTML,
           });
         }
-        logseq.hideMainUI();
+        logseq.hideMainUI({ restoreEditingCursor: true });
+      }
+      else {
+        tagInputFieldRef.current?.focus();
       }
 
     };
@@ -676,7 +676,7 @@ function App() {
       // rebuildDB() is called when currentDirHandle is changed.
     }
     else {
-      alert(t('please-select-pages'));
+      logseq.UI.showMsg(t('please-select-pages'));
     }
   }, [currentGraph, t]);
 
@@ -689,7 +689,7 @@ function App() {
         name: box.name,
       });
     }
-    logseq.hideMainUI();
+    logseq.hideMainUI({ restoreEditingCursor: true });
   };
 
   const getTimeString = (unixTime: number) => {
@@ -774,7 +774,7 @@ function App() {
 
         </div>
         <div className='control-right'>
-          <Clear className='clear-btn' onClick={() => logseq.hideMainUI()}
+          <Clear className='clear-btn' onClick={() => logseq.hideMainUI({ restoreEditingCursor: true })}
             style={{
               cursor: "pointer",
               float: "right",

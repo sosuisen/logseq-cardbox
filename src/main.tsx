@@ -10,6 +10,10 @@ import '@logseq/libs'
 import './i18n/configs';
 import { SimpleCommandKeybinding } from '@logseq/libs/dist/LSPlugin'
 
+const openCardBox = () => {
+  logseq.showMainUI();
+}
+
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter
   /*
@@ -32,7 +36,7 @@ function main() {
     },
     label: 'Open CardBox',
   };
-  logseq.App.registerCommandPalette(command, () => logseq.showMainUI());
+  logseq.App.registerCommandPalette(command, openCardBox);
 
   logseq.provideStyle(`
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
@@ -64,7 +68,7 @@ function main() {
       </a>
   `;
   cardboxDiv.className = `cardbox-nav`;
-  cardboxDiv.addEventListener('click', () => { logseq.showMainUI(); });
+  cardboxDiv.addEventListener('click', openCardBox);
 
   const navHeader = window.parent.document.querySelector('.nav-header');
   const cardboxNav = navHeader!.querySelector(`.cardbox-nav`);
@@ -77,7 +81,7 @@ function main() {
     if ((e.target as HTMLElement).classList.length === 0) {
       // stopPropagation on <Dialog> is ignored because click event on body is fired first.
       // So, check if the click event is fired on <Dialog> or not.
-      logseq.hideMainUI();
+      logseq.hideMainUI({ restoreEditingCursor: true });
     }
   });
 
@@ -93,9 +97,6 @@ function main() {
 }
 
 // bootstrap
-
 logseq.ready({
-  openCardBox: () => {
-    logseq.showMainUI();
-  }
+  openCardBox
 }, main).catch(console.error)
