@@ -747,7 +747,7 @@ function App() {
             {filteredPages.length === 0 ? totalCardNumber : cardboxes?.length} cards
           </div>
           <TextField id="tag-input" size='small' label={t("filter-by-page-tag")} variant="filled"
-            style={{ marginLeft: "12px", marginTop: "3px", float: "left" }}
+            style={{ marginLeft: "12px", marginTop: "1px", float: "left" }}
             value={tag} onChange={e => setTag(e.target.value)}
             inputRef={tagInputFieldRef}
             InputProps={{
