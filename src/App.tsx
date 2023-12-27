@@ -531,13 +531,13 @@ function App() {
             // Remove empty page
             logger.debug(`Empty page: ${originalName}`);
             db.box.delete([currentGraph, originalName]).then(() => {
-              setTotalCardNumber(num => num - 1);
+              setTotalCardNumber(num => num > 0 ? num - 1 : 0);
             });
           }
         }
         else if (operation === 'delete') {
           db.box.delete([currentGraph, originalName]).then(() => {
-            setTotalCardNumber(num => num - 1);
+            setTotalCardNumber(num => num > 0 ? num - 1 : 0);
           });
         }
         else {
