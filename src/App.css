@@ -15,11 +15,7 @@
   margin-top: 7px;
   height: 60px;
   display: grid;
-  grid-template-columns: 1fr 110px 1fr;
-}
-
-.control-center {
-  width: 300px;
+  grid-template-columns: 1fr 60px;
 }
 
 .loading {

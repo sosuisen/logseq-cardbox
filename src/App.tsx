@@ -355,10 +355,10 @@ function App() {
 
   useEffect(() => {
     const filter = async (tag: string) => {
+
       setSelectedBox(0);
 
       if (tag === '') {
-        // setMaxBoxNumber(pagenationBaseSize);
         setFilteredPages([]);
         return;
       }
@@ -371,7 +371,6 @@ function App() {
         [?p :block/tags ?t]
         [?p :block/original-name ?name]]
       `);
-      // logger.debug(pageEntries);
       if (pageEntries.length === 0) {
         setFilteredPages([["", ""]]);
         return;
@@ -749,8 +748,8 @@ function App() {
           <div className='card-number'>
             {filteredPages.length === 0 ? totalCardNumber : cardboxes?.length} cards
           </div>
-          <TextField id="tag-input" size='small' label="Filter by Page Tag" variant="filled"
-            style={{ marginLeft: "12px", marginTop: "3px" }}
+          <TextField id="tag-input" size='small' label={t("filter-by-page-tag")} variant="filled"
+            style={{ marginLeft: "12px", marginTop: "3px", float: "left" }}
             value={tag} onChange={e => setTag(e.target.value)}
             inputRef={tagInputFieldRef}
             InputProps={{
@@ -769,9 +768,6 @@ function App() {
               },
             }}
           />
-        </div>
-        <div className='control-center'>
-
         </div>
         <div className='control-right'>
           <Clear className='clear-btn' onClick={() => logseq.hideMainUI({ restoreEditingCursor: true })}
