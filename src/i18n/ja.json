@@ -2,7 +2,7 @@
     "rebuild": "再構築",
     "open-pages-btn": "pagesフォルダを選択",
     "open-pages-btn-label": "Logseqのグラフ保存先フォルダにあるpagesフォルダを選択してください。",
-    "footer": "クリックまたはカーソル移動+Enterキーで開きます。※本文のないページは表示されません。",
+    "footer": "本文のないページは表示されません。クリックまたはカーソル移動+Enterキーで開きます。",
     "loading": "構築中...",
     "please-select-pages": "pagesという名前のフォルダを選択してください。",
     "filter-by-page-tag": "ページタグで絞り込み",
