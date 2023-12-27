@@ -11,6 +11,7 @@ Plugin to add thumbnail cards to [Logseq](https://github.com/logseq/logseq) that
 Any of the following:
 - "CardBox" button on the left sidebar
 - Click the CardBox icon in the top right corner of the page
+- Enter "Open CardBox" in the command palette
 - Shortcut:
   - (Windows) Ctrl + Shift + Enter
   - (macOS) Cmd + Shift + Enter
@@ -25,8 +26,21 @@ Any of the following:
 - Click on a page or use the cursor keys to move the selection and press Enter to open it.
   - If you hold down Shift while performing the open operation, the page will open in the sidebar.
 
+## Filtering using page tags
+- Type a character key to filter cards by a page tag
+- What is a page tag? See below:
+
+![page tag](./images/pagetag.png)
+
 ## Closing the CardBox
 - Close CardBox by pressing the X button in the top right-hand corner or pressing the Esc key.
+
+## Key bindings
+- Any character keys: Input a page tag
+- Up, Down, Left, Right: Move the cursor to select a card
+- Enter: Open the selected card
+- Shift+Enter: Open the selected card in the sidebar
+- Esc: Close the CardBox
 
 ## Languages supported 
 - English
