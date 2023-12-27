@@ -1,8 +1,10 @@
 {
-    "rebuild-btn": "再構築",
+    "rebuild": "再構築",
     "open-pages-btn": "pagesフォルダを選択",
     "open-pages-btn-label": "Logseqのグラフ保存先フォルダにあるpagesフォルダを選択してください。",
-    "footer": "クリックまたはカーソル移動+Enterキーで開きます。Shiftキーも押しながら開くとサイドバーへ。※本文のないページは表示されません。",
+    "footer": "クリックまたはカーソル移動+Enterキーで開きます。※本文のないページは表示されません。",
     "loading": "構築中...",
-    "please-select-pages": "pagesという名前のフォルダを選択してください。"
+    "please-select-pages": "pagesという名前のフォルダを選択してください。",
+    "filter-by-page-tag": "ページタグで絞り込み",
+    "cancel": "キャンセル"
 }

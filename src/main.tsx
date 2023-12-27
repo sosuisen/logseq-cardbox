@@ -1,10 +1,18 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import './index.css'
+import "@fontsource/roboto"
+import "@fontsource/roboto/700.css"
+import '@fontsource/noto-sans-jp'
+import '@fontsource/noto-sans-jp/700.css'
+import './main.css'
 import '@logseq/libs'
 import './i18n/configs';
 import { SimpleCommandKeybinding } from '@logseq/libs/dist/LSPlugin'
+
+const openCardBox = () => {
+  logseq.showMainUI();
+}
 
 function main() {
   // Ctrl+Shift+Enter or Command+Shift+Enter
@@ -20,7 +28,7 @@ function main() {
     key: string;
     keybinding: SimpleCommandKeybinding
     label: string;
-  } =  {
+  } = {
     key: 'cardbox:open',
     keybinding: {
       binding: 'mod+shift+enter',
@@ -28,7 +36,7 @@ function main() {
     },
     label: 'Open CardBox',
   };
-  logseq.App.registerCommandPalette(command, () => logseq.showMainUI());
+  logseq.App.registerCommandPalette(command, openCardBox);
 
   logseq.provideStyle(`
     @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0");
@@ -60,7 +68,7 @@ function main() {
       </a>
   `;
   cardboxDiv.className = `cardbox-nav`;
-  cardboxDiv.addEventListener('click', () => { logseq.showMainUI(); });
+  cardboxDiv.addEventListener('click', openCardBox);
 
   const navHeader = window.parent.document.querySelector('.nav-header');
   const cardboxNav = navHeader!.querySelector(`.cardbox-nav`);
@@ -69,9 +77,12 @@ function main() {
   }
   navHeader!.insertBefore(cardboxDiv, navHeader!.lastChild);
 
-
-  document.body.addEventListener('click', () => {
-    logseq.hideMainUI();
+  document.body.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).classList.length === 0) {
+      // stopPropagation on <Dialog> is ignored because click event on body is fired first.
+      // So, check if the click event is fired on <Dialog> or not.
+      logseq.hideMainUI({ restoreEditingCursor: true });
+    }
   });
 
   document.getElementById('app')!.addEventListener('click', e => {
@@ -86,19 +97,6 @@ function main() {
 }
 
 // bootstrap
-
 logseq.ready({
-  openCardBox: () => {
-    logseq.showMainUI();
-  }
+  openCardBox
 }, main).catch(console.error)
-
-window.addEventListener("keydown", (event) => {
-  switch (event.key) {
-    case "Escape":
-      logseq.hideMainUI();
-      break;
-    default:
-      return;
-  }
-});

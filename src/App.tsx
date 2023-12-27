@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { logger } from './logger'; // logger.tsからロガーをインポート
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { format } from 'date-fns';
 import { BlockEntity, BlockUUIDTuple, IDatom } from '@logseq/libs/dist/LSPlugin.user';
 import { useTranslation } from "react-i18next";
@@ -6,7 +7,8 @@ import i18n from "i18next";
 import { db, Box } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Dialog } from './Dialog';
+import { Button, IconButton, InputAdornment, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
+import { Clear } from '@mui/icons-material';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
@@ -17,6 +19,10 @@ type ParentBlocks =
     blocks: (BlockEntity | BlockUUIDTuple)[];
     index: number;
   };
+
+type SearchResultPage = string[];
+
+type PrimaryKey = [string, string];
 
 type FileChanges = {
   blocks: BlockEntity[];
@@ -49,7 +55,8 @@ const encodeLogseqFileName = (name: string) => {
     .replace(/\|/g, '%7C')
     .replace(/\?/g, '%3F')
     .replace(/\*/g, '%2A')
-    .replace(/#/g, '%23');
+    .replace(/#/g, '%23')
+    .replace(/^\./, '%2E');
 };
 
 const decodeLogseqFileName = (name: string) => {
@@ -69,7 +76,8 @@ const decodeLogseqFileName = (name: string) => {
     .replace(/%7C/g, '|')
     .replace(/%3F/g, '?')
     .replace(/%2A/g, '*')
-    .replace(/%23/g, '#');
+    .replace(/%23/g, '#')
+    .replace(/%2E/g, '.');
 };
 
 const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryHandle, preferredFormat: MarkdownOrOrg): Promise<number> => {
@@ -79,15 +87,15 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
 
   let fileHandle = await handle.getFileHandle(path).catch(() => {
     // Logseq does not save an empty page as a local file.
-    console.log(`Failed to get file handle: ${path}`);
+    logger.debug(`Failed to get file handle: ${path}`);
     return null;
   });
   if (!fileHandle) {
     path = fileName + (preferredFormat === 'markdown' ? '.org' : '.md');
-    console.log(`Retry: ${path}`);
+    logger.debug(`Retry: ${path}`);
     fileHandle = await handle.getFileHandle(path).catch(() => {
       // Logseq does not save an empty page as a local file.
-      console.log(`Failed to get file handle: ${path}`);
+      logger.debug(`Failed to get file handle: ${path}`);
       return null;
     });
   }
@@ -127,7 +135,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
       if (Object.prototype.hasOwnProperty.call(block, 'id')) {
         let content = (block as BlockEntity).content.substring(0, max);
         // skip property
-        if(!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
+        if (!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
           if (parentStack.length > 1) {
             content = '  '.repeat(parentStack.length - 1) + '* ' + content;
           }
@@ -167,7 +175,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
         const ma = (block as BlockEntity).content.match(/[[(]..\/assets\/(.+\.(png|jpg|jpeg))[\])]/i);
         if (ma) {
           image = ma[1];
-          // console.log("asset: " + ma[1]);
+          // logger.debug("asset: " + ma[1]);
           break;
         }
         //            summary.push(content);
@@ -187,7 +195,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 const parseOperation = (changes: FileChanges): [Operation, string] => {
   let operation: Operation = '';
   let originalName = '';
-  // console.log(changes);
+  // logger.debug(changes);
   for (const block of changes.blocks) {
     if (Object.prototype.hasOwnProperty.call(block, 'path')) {
       if (changes.txData.length === 0) continue;
@@ -201,7 +209,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
 
           operation = 'modified';
 
-          // console.log("File modified: " + originalName);
+          // logger.debug("File modified: " + originalName);
 
           return [operation, originalName];
         }
@@ -217,7 +225,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
         createOrDelete = 'delete';
       }
       else {
-        console.log(`created, ${originalName}`);
+        logger.debug(`created, ${originalName}`);
       }
       operation = createOrDelete;
 
@@ -230,6 +238,7 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
+const tileGridHeight = 160; // height of a grid row
 
 function App() {
   const [currentDirHandle, setCurrentDirHandle] = useState<FileSystemDirectoryHandle>();
@@ -239,16 +248,137 @@ function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedBox, setSelectedBox] = useState<number>(0);
   const [open, setOpen] = useState<boolean>(false);
+  const [filteredPages, setFilteredPages] = useState<PrimaryKey[]>([]);
+  const [tag, setTag] = useState<string>('');
+  const tileRef = useRef<HTMLDivElement | null>(null);
+  const tagInputFieldRef = useRef<HTMLInputElement | null>(null);
+  //  const appRef = useRef<HTMLDivElement | null>(null);
+  const [tileColumnSize, setTileColumnSize] = useState<number>(0);
+  const [tileRowSize, setTileRowSize] = useState<number>(0);
+  const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
+  const [totalCardNumber, setTotalCardNumber] = useState<number>(0);
 
   const { t } = useTranslation();
 
   const cardboxes = useLiveQuery(
-    () => db.box
-      .orderBy('time')
-      .reverse()
-      .filter(box => box.graph === currentGraph)
-      .toArray()
-    , [currentGraph]);
+    () => {
+      if (filteredPages.length === 0) {
+        return db.box
+          .orderBy('time')
+          .filter(box => box.graph === currentGraph)
+          .reverse()
+          .limit(maxBoxNumber)
+          .toArray()
+      }
+      else {
+        return db.box
+          .where(':id')
+          .anyOf(filteredPages)
+          .reverse()
+          .sortBy('time')
+      }
+    }
+    , [currentGraph, filteredPages, maxBoxNumber]);
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // logger.debug('Scrolled to: ' + Math.floor(tileRef.current!.scrollTop / pagenationScrollHeight));
+
+      const loadScreensAhead = 3;
+      const loadRowsAhead = loadScreensAhead * tileRowSize;
+      const loadRowsByScroll = (Math.floor(Math.floor(tileRef.current!.scrollTop / tileGridHeight) / loadRowsAhead) + 1) * loadRowsAhead;
+      const limit = tileColumnSize * (tileRowSize + loadRowsByScroll);
+
+      setMaxBoxNumber(current => current < limit ? limit : current);
+    };
+
+    const tileElement = tileRef.current;
+    if (tileElement) {
+      tileElement.addEventListener('scroll', handleScroll);
+    }
+
+    // コンポーネントのアンマウント時にイベントリスナーを削除
+    return () => {
+      if (tileElement) {
+        tileElement.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [tileRowSize, tileColumnSize]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: { key: string; }) => {
+      switch (e.key) {
+        case "Escape":
+          logseq.hideMainUI({ restoreEditingCursor: true });
+          break;
+        default:
+          return;
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [filteredPages]);
+
+  useEffect(() => {
+    tileRef.current!.style.gridAutoRows = `${tileGridHeight}px`;
+
+    const handleResize = () => {
+      const gridStyles = window.getComputedStyle(tileRef.current!);
+      const columnSize = gridStyles.gridTemplateColumns.split(' ').length;
+      setTileColumnSize(columnSize);
+
+      // const rowSize = gridStyles.gridTemplateRows.split(' ').length; // This gets all rows in tile grid
+      const rowsInAScreen = Math.ceil(tileRef.current!.offsetHeight / tileGridHeight);
+
+      setTileRowSize(rowsInAScreen);
+
+      // logger.debug(columnSize, rowsInAScreen);
+
+      const scrollRow = Math.floor(tileRef.current!.scrollTop / tileGridHeight) + 1;
+      const limit = columnSize * (rowsInAScreen + scrollRow);
+
+      setMaxBoxNumber(current => current < limit ? limit : current);
+    };
+    handleResize(); // call once after render tile
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+
+
+  useEffect(() => {
+    const filter = async (tag: string) => {
+
+      setSelectedBox(0);
+
+      if (tag === '') {
+        setFilteredPages([]);
+        return;
+      }
+
+      const pageEntries: SearchResultPage[] = await logseq.DB.datascriptQuery(`
+      [:find ?name
+        :where
+        [?t :block/name ?namePattern]
+        [(clojure.string/starts-with? ?namePattern "${tag}")]
+        [?p :block/tags ?t]
+        [?p :block/original-name ?name]]
+      `);
+      if (pageEntries.length === 0) {
+        setFilteredPages([["", ""]]);
+        return;
+      }
+      setFilteredPages(pageEntries.map(entry => [currentGraph, entry[0]]));
+    };
+    filter(tag.toLowerCase());
+  }, [tag, currentGraph]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -269,10 +399,13 @@ function App() {
     });
   }, []);
 
-  const fetchData = useCallback(() => {
+  const rebuildDB = useCallback(() => {
+    if (!currentGraph) return;
+
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
         setLoading(false);
+        setTotalCardNumber(count);
       }
       else {
         setLoading(true);
@@ -289,7 +422,7 @@ function App() {
           if (page) {
             if (page['journal?']) continue;
 
-            promises.push((async () => {
+            const promise = (async () => {
               let updatedTime: number | undefined = 0;
               if (currentDirHandle) {
                 updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
@@ -300,20 +433,17 @@ function App() {
                 updatedTime = page.updatedAt;
               }
               if (!updatedTime) return;
-
               // Load summary asynchronously
               const blocks = await logseq.Editor.getPageBlocksTree(page.uuid).catch(err => {
                 console.error(`Failed to get blocks: ${page.originalName}`);
                 console.error(err);
                 return null;
               });
-
               // Quick check for empty page
               if (!blocks || blocks.length === 0) {
                 return;
               }
               const [summary, image] = getSummary(blocks);
-
               // Logseq has many meta pages that has no content. Skip them.
               // Detailed check for empty page
               if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
@@ -326,15 +456,16 @@ function App() {
                   image,
                 });
               }
-            })());
+            })();
+            promises.push(promise);
           }
-          if (!page || promises.length >= 100) {
-            try {
-              await Promise.all(promises);
-            } catch (err) {
+          const loadingCardNumber = promises.length;
+          if (pages.length === 0 || loadingCardNumber >= 100) {
+            await Promise.all(promises).catch(err => {
               console.error(err);
-            }
-            promises.splice(0, promises.length);
+            });
+            promises.splice(0, loadingCardNumber);
+            setTotalCardNumber(await db.box.where('graph').equals(currentGraph).count());
             // LiveQuery needs some time to update.
             await sleep(500);
           }
@@ -346,7 +477,7 @@ function App() {
     });
   }, [currentDirHandle, currentGraph, preferredFormat]);
 
-  useEffect(() => fetchData(), [fetchData]);
+  useEffect(() => rebuildDB(), [rebuildDB]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
@@ -355,7 +486,7 @@ function App() {
       // Ignore create event because the file is not created yet.
       if (operation == 'modified' || operation == 'delete') {
         const updatedTime = new Date().getTime();
-        console.log(`${operation}, ${originalName}, ${updatedTime}`);
+        logger.debug(`${operation}, ${originalName}, ${updatedTime}`);
 
         // A trailing slash in the title cannot be recovered from the file name. 
         // This is because they are removed during encoding.
@@ -395,7 +526,7 @@ function App() {
           }
           else {
             // Remove empty page
-            console.log(`Empty page: ${originalName}`);
+            logger.debug(`Empty page: ${originalName}`);
             db.box.delete([currentGraph, originalName]);
           }
         }
@@ -403,7 +534,7 @@ function App() {
           db.box.delete([currentGraph, originalName]);
         }
         else {
-          console.log('Unknown operation: ' + operation);
+          logger.debug('Unknown operation: ' + operation);
         }
 
       }
@@ -437,6 +568,7 @@ function App() {
       const cols = Math.floor(tileWidth / boxWidth);
       const rows = Math.floor(tileHeight / boxHeight);
       if (e.key === 'ArrowUp') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox - cols;
           if (newIndex < 0) {
@@ -451,6 +583,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowDown') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox + cols;
           if (newIndex >= tile!.childElementCount) {
@@ -465,6 +598,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowRight') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox + 1;
           if (newIndex >= tile!.childElementCount) {
@@ -480,6 +614,7 @@ function App() {
         });
       }
       else if (e.key === 'ArrowLeft') {
+        tileRef.current?.focus(); // To un-focus tag input field.
         setSelectedBox(selectedBox => {
           const newIndex = selectedBox - 1;
           if (newIndex < 0) {
@@ -495,6 +630,10 @@ function App() {
         });
       }
       else if (e.key === 'Enter') {
+        if (tagInputFieldRef.current && tagInputFieldRef.current === document.activeElement) {
+          return;
+        }
+
         const box = (document.getElementsByClassName('selectedBox')[0] as HTMLElement);
         if (e.shiftKey) {
           logseq.Editor.openInRightSidebar(box.id);
@@ -504,23 +643,25 @@ function App() {
             name: box.getElementsByClassName('box-title')[0].innerHTML,
           });
         }
-        logseq.hideMainUI();
+        logseq.hideMainUI({ restoreEditingCursor: true });
+      }
+      else {
+        switch (e.key) {
+          case "Shift":
+          case "Control":
+          case "Alt":
+          case "Meta":
+          case "Tab":
+            return;
+        }
+        tagInputFieldRef.current?.focus();
       }
 
     };
     window.addEventListener('keydown', handleKeyDown);
 
-    const handleResize = () => {
-      const tile = document.getElementById('tile');
-      if (!tile?.hasChildNodes()) {
-        return;
-      }
-    };
-    window.addEventListener('resize', handleResize);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
     };
   }, [loading]);
 
@@ -533,10 +674,10 @@ function App() {
       await db.box.where('graph').equals(currentGraph).delete();
       setCurrentDirHandle(handle);
       setOpen(false);
-      // fetchData() is called when currentDirHandle is changed.
+      // rebuildDB() is called when currentDirHandle is changed.
     }
     else {
-      alert(t('please-select-pages'));
+      logseq.UI.showMsg(t('please-select-pages'));
     }
   }, [currentGraph, t]);
 
@@ -549,7 +690,7 @@ function App() {
         name: box.name,
       });
     }
-    logseq.hideMainUI();
+    logseq.hideMainUI({ restoreEditingCursor: true });
   };
 
   const getTimeString = (unixTime: number) => {
@@ -580,49 +721,68 @@ function App() {
     </div>
   ));
 
-
   return (
     <>
       <div className='control'>
         <div className='control-left'>
-          <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
-            {t("loading")}
-          </div>
-          <div className='card-number'>
-            {cardboxes?.length ?? 0} cards
-          </div>
-        </div>
-        <div className='control-center'>
-          <div className='cardbox-title'>CardBox</div>
-        </div>
-        <div className='control-right'>
-          <div className='close-btn' onClick={() => logseq.hideMainUI()}>
-            <span className='material-symbols-outlined'>
-              close
-            </span>
-          </div>
-          <button className='rebuild-btn' style={{ display: loading ? 'none' : 'block' }} onClick={async () => {
+          <Button variant="outlined" tabIndex={-1} style={{ display: loading ? 'none' : 'block', color: "black", float: "left", borderColor: "black", marginLeft: "12px", marginTop: "7px" }} className='rebuild-btn' onClick={async () => {
             if (currentDirHandle) {
               await db.box.where('graph').equals(currentGraph).delete();
-              fetchData();
+              rebuildDB();
             }
             else {
               setOpen(true)
             }
-          }}>
-            {t("rebuild-btn")}
-          </button>
-          <Dialog isOpen={open} onClose={() => setOpen(false)}>
-            <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
-              ({currentGraph.replace('logseq_local_', '')}/pages)
-            </div>
-            <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
-              {t("open-pages-btn")}
-            </button>
+          }}>{t("rebuild")}</Button>
+          <Dialog open={open} onClose={() => setOpen(false)}>
+            <DialogTitle>{t("rebuild")}</DialogTitle>
+            <DialogContent>
+              {t("open-pages-btn-label")} ({currentGraph.replace('logseq_local_', '')}/pages)
+            </DialogContent>
+            <DialogActions>
+              <Button variant="outlined" onClick={() => setOpen(false)}>{t("cancel")}</Button>
+              <Button variant="contained" onClick={openDirectoryPicker} color="primary">{t("open-pages-btn")}</Button>
+            </DialogActions>
           </Dialog>
+          <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
+            {t("loading")}
+          </div>
+          <div className='card-number'>
+            {filteredPages.length === 0 ? totalCardNumber : cardboxes?.length} cards
+          </div>
+          <TextField id="tag-input" size='small' label={t("filter-by-page-tag")} variant="filled"
+            style={{ marginLeft: "12px", marginTop: "3px", float: "left" }}
+            value={tag} onChange={e => setTag(e.target.value)}
+            inputRef={tagInputFieldRef}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setTag('')}
+                    edge="end"
+                  >
+                    <Clear />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              inputProps: {
+                tabIndex: 1,
+              },
+            }}
+          />
+        </div>
+        <div className='control-right'>
+          <Clear className='clear-btn' onClick={() => logseq.hideMainUI({ restoreEditingCursor: true })}
+            style={{
+              cursor: "pointer",
+              float: "right",
+              marginTop: "10px",
+              marginRight: "24px",
+            }}
+          />
         </div>
       </div >
-      <div id='tile'>
+      <div id='tile' ref={tileRef} tabIndex={2}>
         {boxElements}
       </div>
       <div className='footer'>

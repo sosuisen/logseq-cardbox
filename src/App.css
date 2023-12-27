@@ -13,56 +13,27 @@
 
 .control {
   margin-top: 7px;
-  height: 40px;
+  height: 60px;
   display: grid;
-  grid-template-columns: 1fr 110px 1fr;
+  grid-template-columns: 1fr 60px;
 }
 
 .loading {
-  color: #900000;
+  color: rgba(144, 0, 0, 0.7);
   text-align: left;
   margin-left: 24px;
   margin-top: 7px;
-  float:left;
+  float: left;
+  font-size: 24px;
 }
 
 .card-number {
+  color: rgba(0, 0, 0, 0.7);
   text-align: left;
   margin-left: 24px;
   margin-top: 7px;
-  float:left;
-}
-
-.cardbox-title {
+  float: left;
   font-size: 24px;
-  width: 110px;
-}
-
-.rebuild-btn {
-  float: right;
-  margin-right: 24px;
-  margin-top: 4px;
-  height: 32px;
-}
-
-.close-btn {
-  cursor: pointer;
-  float: right;
-  margin-top: 4px;
-  margin-right: 24px;
-  height: 32px;
-  width: 32px;
-}
-
-.open-pages-btn {
-  font-size: 24px;
-  margin-top: 24px;
-}
-
-.open-pages-btn-label {
-  font-size: 24px;
-  margin-top: 24px;
-  margin-left: 5px;
 }
 
 #tile {
@@ -70,7 +41,6 @@
   padding-left: 24px;
   padding-right: 24px;
   display: grid;
-  grid-auto-rows: 160px;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   overflow-y: auto;
 }
@@ -100,7 +70,7 @@
 
 .box-title {
   width: 100%;
-  font-weight: bold;
+  font-weight: 700;
   font-size: 14px;
   overflow: hidden;
   border-bottom: 1px solid #90c0ff;
@@ -129,10 +99,21 @@
 }
 
 .footer {
+  color: rgba(0, 0, 0, 0.7);
   font-size: 14px;
   position: absolute;
   width: 100%;
   height: 24px;
   bottom: 0;
   background-color: #dcdde0;
+}
+
+.tag-label {
+  float: left;
+  margin-top: 7px;
+  margin-left: 24px;
+}
+
+.tag-input {
+  float: left;
 }

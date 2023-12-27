@@ -1,8 +1,10 @@
 {
-    "rebuild-btn": "Rebuild",
+    "rebuild": "Rebuild",
     "open-pages-btn": "Select pages folder",
     "open-pages-btn-label": "Please select the pages folder in the Logseq graph storage folder." ,
-    "footer": "Click or move the cursor and press Enter to open the page; hold down the Shift key to open in sidebar. *Empty pages are not displayed.",
+    "footer": "Click or move the cursor and press Enter to open the page. *Empty pages are not displayed.",
     "loading" : "Building...",
-    "please-select-pages": "Select the folder named 'pages'"
+    "please-select-pages": "Select the folder named 'pages'",
+    "filter-by-page-tag": "Filter by Page Tag",
+    "cancel": "Cancel"
 }
