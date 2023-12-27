@@ -24,7 +24,7 @@ function main() {
     key: string;
     keybinding: SimpleCommandKeybinding
     label: string;
-  } =  {
+  } = {
     key: 'cardbox:open',
     keybinding: {
       binding: 'mod+shift+enter',
@@ -73,9 +73,12 @@ function main() {
   }
   navHeader!.insertBefore(cardboxDiv, navHeader!.lastChild);
 
-
-  document.body.addEventListener('click', () => {
-    logseq.hideMainUI();
+  document.body.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).classList.length === 0) {
+      // stopPropagation on <Dialog> is ignored because click event on body is fired first.
+      // So, check if the click event is fired on <Dialog> or not.
+      logseq.hideMainUI();
+    }
   });
 
   document.getElementById('app')!.addEventListener('click', e => {

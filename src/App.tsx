@@ -7,8 +7,7 @@ import i18n from "i18next";
 import { db, Box } from './db';
 import './App.css'
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Dialog } from './Dialog';
-import { Button, IconButton, InputAdornment, TextField } from '@mui/material';
+import { Button, IconButton, InputAdornment, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Clear } from '@mui/icons-material';
 
 type Operation = 'create' | 'modified' | 'delete' | '';
@@ -253,6 +252,7 @@ function App() {
   const [tag, setTag] = useState<string>('');
   const tileRef = useRef<HTMLDivElement | null>(null);
   const tagInputFieldRef = useRef<HTMLInputElement | null>(null);
+//  const appRef = useRef<HTMLDivElement | null>(null);
   const [tileColumnSize, setTileColumnSize] = useState<number>(0);
   const [tileRowSize, setTileRowSize] = useState<number>(0);
   const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
@@ -720,7 +720,6 @@ function App() {
     </div>
   ));
 
-
   return (
     <>
       <div className='control'>
@@ -733,14 +732,16 @@ function App() {
             else {
               setOpen(true)
             }
-          }}>{t("rebuild-btn")}</Button>
-          <Dialog isOpen={open} onClose={() => setOpen(false)}>
-            <div className='open-pages-btn-label'>{t("open-pages-btn-label")}<br />
-              ({currentGraph.replace('logseq_local_', '')}/pages)
-            </div>
-            <button className='open-pages-btn' onClick={() => openDirectoryPicker()}>
-              {t("open-pages-btn")}
-            </button>
+          }}>{t("rebuild")}</Button>
+          <Dialog open={open} onClose={() => setOpen(false)}>
+            <DialogTitle>{t("rebuild")}</DialogTitle>
+            <DialogContent>
+              {t("open-pages-btn-label")} ({currentGraph.replace('logseq_local_', '')}/pages)
+            </DialogContent>
+            <DialogActions>
+              <Button variant="outlined" onClick={() => setOpen(false)}>{t("cancel")}</Button>
+              <Button variant="contained" onClick={openDirectoryPicker} color="primary">{t("open-pages-btn")}</Button>
+            </DialogActions>
           </Dialog>
           <div className='loading' style={{ display: loading ? 'block' : 'none' }}>
             {t("loading")}

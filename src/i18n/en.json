@@ -5,5 +5,6 @@
     "footer": "Click or move the cursor and press Enter to open the page; hold down the Shift key to open in sidebar. *Empty pages are not displayed.",
     "loading" : "Building...",
     "please-select-pages": "Select the folder named 'pages'",
-    "filter-by-page-tag": "Filter by Page Tag"
+    "filter-by-page-tag": "Filter by Page Tag",
+    "cancel": "Cancel"
 }
