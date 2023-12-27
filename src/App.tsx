@@ -377,7 +377,7 @@ function App() {
       }
       setFilteredPages(pageEntries.map(entry => [currentGraph, entry[0]]));
     };
-    filter(tag);
+    filter(tag.toLowerCase());
   }, [tag, currentGraph]);
 
   useEffect(() => {
