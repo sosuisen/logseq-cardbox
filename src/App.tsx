@@ -422,7 +422,7 @@ function App() {
           if (page) {
             if (page['journal?']) continue;
 
-            promises.push((async () => {
+            const promise = (async () => {
               let updatedTime: number | undefined = 0;
               if (currentDirHandle) {
                 updatedTime = await getLastUpdatedTime(encodeLogseqFileName(page.originalName), currentDirHandle!, preferredFormat);
@@ -433,20 +433,17 @@ function App() {
                 updatedTime = page.updatedAt;
               }
               if (!updatedTime) return;
-
               // Load summary asynchronously
               const blocks = await logseq.Editor.getPageBlocksTree(page.uuid).catch(err => {
                 console.error(`Failed to get blocks: ${page.originalName}`);
                 console.error(err);
                 return null;
               });
-
               // Quick check for empty page
               if (!blocks || blocks.length === 0) {
                 return;
               }
               const [summary, image] = getSummary(blocks);
-
               // Logseq has many meta pages that has no content. Skip them.
               // Detailed check for empty page
               if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
@@ -459,19 +456,16 @@ function App() {
                   image,
                 });
               }
-            })());
+            })();
+            promises.push(promise);
           }
           const loadingCardNumber = promises.length;
-          if (!page || loadingCardNumber >= 100) {
-            try {
-              await Promise.all(promises);
-            } catch (err) {
+          if (pages.length === 0 || loadingCardNumber >= 100) {
+            await Promise.all(promises).catch(err => {
               console.error(err);
-            }
+            });
             promises.splice(0, loadingCardNumber);
-
             setTotalCardNumber(await db.box.where('graph').equals(currentGraph).count());
-
             // LiveQuery needs some time to update.
             await sleep(500);
           }
