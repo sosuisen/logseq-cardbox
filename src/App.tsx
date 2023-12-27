@@ -354,6 +354,7 @@ function App() {
 
 
   useEffect(() => {
+    // pageEntries should be reloaded when totalCardNumber is changed.
     const filter = async (tag: string) => {
 
       setSelectedBox(0);
@@ -378,7 +379,7 @@ function App() {
       setFilteredPages(pageEntries.map(entry => [currentGraph, entry[0]]));
     };
     filter(tag.toLowerCase());
-  }, [tag, currentGraph]);
+  }, [tag, currentGraph, totalCardNumber]);
 
   useEffect(() => {
     const getUserConfigs = async () => {
@@ -520,18 +521,24 @@ function App() {
                   time: updatedTime,
                   summary,
                   image,
-                })
+                }).then(() => {
+                  setTotalCardNumber(num => num + 1);
+                });
               }
             }
           }
           else {
             // Remove empty page
             logger.debug(`Empty page: ${originalName}`);
-            db.box.delete([currentGraph, originalName]);
+            db.box.delete([currentGraph, originalName]).then(() => {
+              setTotalCardNumber(num => num - 1);
+            });
           }
         }
         else if (operation === 'delete') {
-          db.box.delete([currentGraph, originalName]);
+          db.box.delete([currentGraph, originalName]).then(() => {
+            setTotalCardNumber(num => num - 1);
+          });
         }
         else {
           logger.debug('Unknown operation: ' + operation);
