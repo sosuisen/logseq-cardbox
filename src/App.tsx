@@ -630,10 +630,6 @@ function App() {
         });
       }
       else if (e.key === 'Enter') {
-        if (tagInputFieldRef.current && tagInputFieldRef.current === document.activeElement) {
-          return;
-        }
-
         const box = (document.getElementsByClassName('selectedBox')[0] as HTMLElement);
         if (e.shiftKey) {
           logseq.Editor.openInRightSidebar(box.id);
