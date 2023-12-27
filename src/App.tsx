@@ -652,6 +652,14 @@ function App() {
         logseq.hideMainUI({ restoreEditingCursor: true });
       }
       else {
+        switch (e.key) {
+          case "Shift":
+          case "Control":
+          case "Alt":
+          case "Meta":
+          case "Tab":
+            return;
+        }
         tagInputFieldRef.current?.focus();
       }
 
