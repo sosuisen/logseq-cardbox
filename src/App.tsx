@@ -10,6 +10,10 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Button, IconButton, InputAdornment, TextField, Dialog, DialogActions, DialogContent, DialogTitle } from '@mui/material';
 import { Clear } from '@mui/icons-material';
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import { dotnet } from '../wasm/_framework/dotnet.js'
+
 type Operation = 'create' | 'modified' | 'delete' | '';
 
 type MarkdownOrOrg = 'markdown' | 'org';
@@ -400,8 +404,14 @@ function App() {
     });
   }, []);
 
-  const rebuildDB = useCallback(() => {
+  const rebuildDB = useCallback(async () => {
     if (!currentGraph) return;
+
+    const { getAssemblyExports, getConfig } = await dotnet.create();
+    const config = getConfig();
+    const exports = await getAssemblyExports(config.mainAssemblyName);
+    const svg = exports.PicturesqueTags.Program.GeneratePtag("Hello from JS", 256, 256);
+    console.log(svg);
 
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
@@ -478,7 +488,7 @@ function App() {
     });
   }, [currentDirHandle, currentGraph, preferredFormat]);
 
-  useEffect(() => rebuildDB(), [rebuildDB]);
+  useEffect(() => { rebuildDB(); }, [rebuildDB]);
 
   useEffect(() => {
     const onFileChanged = async (changes: FileChanges) => {
