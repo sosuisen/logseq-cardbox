@@ -12,7 +12,7 @@ import { Clear } from '@mui/icons-material';
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import { dotnet } from '../wasm/_framework/dotnet.js'
+import { dotnet } from '../wasm/dotnet.js'
 
 type Operation = 'create' | 'modified' | 'delete' | '';
 
