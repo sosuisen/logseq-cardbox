@@ -6,7 +6,7 @@
   margin-top: 2%;
   margin-left: 2%;
   position: absolute;
-  background-color: #dcdde0;
+  background-color: #f0f0f0;
   box-shadow: 5px 5px 0 0 #c0c0c0;
   border-radius: 3px;
   display: grid;
@@ -48,25 +48,24 @@
 
 .box {
   cursor: pointer;
-  border-radius: 0px 0px 3px 3px;
+  border-radius: 3px 3px 3px 3px;
   margin: 10px auto 10px 10px;
   width: 140px;
   height: 140px;
-  box-shadow: 2px 3px 0 0px #d0d0d0;
-  background-color: #ffffff;
-  border-top: 5px solid #90c0ff;
   overflow-y: hidden;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  background-color:rgba(255,255,255,0.4);
+  background-blend-mode:lighten; /* to lighten background-image */
 }
 
 .selectedBox {
-  background-color: #f0f0ff;
+  border: 4px solid #606060;
 }
 
 .box:hover {
-  background-color: #e0e0e0;
+  border: 4px dashed #606060;
 }
 
 .box-title {
@@ -74,18 +73,18 @@
   font-weight: 700;
   font-size: 14px;
   overflow: hidden;
-  border-bottom: 1px solid #90c0ff;
   flex-shrink: 0;
+  z-index: 100;
 }
 
 .box-summary {
   font-size: 12px;
-  color: #606060;
   overflow: hidden;
   text-align: left;
   padding: 7px;
   white-space: pre-wrap;
   flex-grow: 1;
+  z-index: 100;
 }
 
 .box-image {
@@ -93,6 +92,16 @@
   padding-top: 7px;
   display: none;
   flex-grow: 1;
+  z-index: 100;
+}
+
+.box-svg {
+  position: absolute;
+  display: none;
+  flex-grow: 1;
+  width: 140px;
+  height: 140px;
+  opacity: 0.7;
 }
 
 .box-date {

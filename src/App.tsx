@@ -112,12 +112,13 @@ const getLastUpdatedTime = async (fileName: string, handle: FileSystemDirectoryH
   return date.getTime();
 };
 
-const getSummary = (blocks: BlockEntity[]): [string[], string] => {
+const getSummary = (blocks: BlockEntity[]): [string[], string, string[]] => {
   const max = 100;
   let total = 0;
   const summary = [];
   let image = '';
   const parentStack: ParentBlocks[] = [];
+  const properties: string[] = [];
 
   if (blocks && blocks.length > 0) {
     parentStack.push({
@@ -138,8 +139,16 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
 
       if (Object.prototype.hasOwnProperty.call(block, 'id')) {
         let content = (block as BlockEntity).content.substring(0, max);
+
+        if (total === 0 && properties.length === 0 && content.match(/^[\w-]+?:: /)) {
+          content.split('\n').forEach(line => {
+            if (line.match(/^[\w-]+?:: .*/)) {
+              properties.push(line);
+            }
+          });
+        }
         // skip property
-        if (!content.match(/^\w+?:: ./) && !content.match(/^---\n/)) {
+        else if (!content.match(/^[\w-]+?:: ./) && !content.match(/^---\n/)) {
           if (parentStack.length > 1) {
             content = '  '.repeat(parentStack.length - 1) + '* ' + content;
           }
@@ -193,7 +202,7 @@ const getSummary = (blocks: BlockEntity[]): [string[], string] => {
       }
     }
   }
-  return [summary, image];
+  return [summary, image, properties];
 };
 
 const parseOperation = (changes: FileChanges): [Operation, string] => {
@@ -240,7 +249,37 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
   return [operation, originalName];
 };
 
+const initWasm = async () => {
+  const { getAssemblyExports, getConfig } = await dotnet.create();
+  const config = getConfig();
+  return await getAssemblyExports(config.mainAssemblyName);
+};
+
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
+
+const parsePageNameAndProperties = (pageName: string, properties: string[]): [string[], boolean] => {
+  // Use hierarchy as tag if tags property is not found.
+  const hierarchy = pageName.split('/');
+  hierarchy.pop();
+  let tags = hierarchy;
+  let isExcluded = false;
+  for (const prop of properties) {
+    const ma = prop.match(/^([\w-]+?):: (.*)/);
+    if (ma) {
+      const key = ma[1];
+      const value = ma[2];
+      if (key === 'tags') {
+        tags = value.split(',');
+      }
+      else if (key === 'exclude-from-graph-view') {
+        if (value === 'true') {
+          isExcluded = true;
+        }
+      }
+    }
+  }
+  return [tags, isExcluded];
+}
 
 const tileGridHeight = 160; // height of a grid row
 
@@ -261,6 +300,8 @@ function App() {
   const [tileRowSize, setTileRowSize] = useState<number>(0);
   const [maxBoxNumber, setMaxBoxNumber] = useState<number>(0);
   const [totalCardNumber, setTotalCardNumber] = useState<number>(0);
+
+  const [wasmExports, setWasmExports] = useState<unknown>(null);
 
   const { t } = useTranslation();
 
@@ -404,14 +445,22 @@ function App() {
     });
   }, []);
 
+  const getSvg = useCallback(async (tags: string[]): Promise<string> => {
+    let svg = "";
+    if (!wasmExports) {
+      setWasmExports(await initWasm());
+    }
+    for (const tag of tags) {
+      const trimmedTag = tag.trim();
+      // @ts-expect-error wasmExports is from .NET
+      svg = wasmExports.PicturesqueTags.Program.GeneratePtag(trimmedTag, 140, 140);
+      break;
+    }
+    return svg;
+  }, [wasmExports]);
+
   const rebuildDB = useCallback(async () => {
     if (!currentGraph) return;
-
-    const { getAssemblyExports, getConfig } = await dotnet.create();
-    const config = getConfig();
-    const exports = await getAssemblyExports(config.mainAssemblyName);
-    const svg = exports.PicturesqueTags.Program.GeneratePtag("Hello from JS", 256, 256);
-    console.log(svg);
 
     db.box.where('graph').equals(currentGraph).count().then(async count => {
       if (count > 0) {
@@ -432,7 +481,6 @@ function App() {
           const page = pages.shift();
           if (page) {
             if (page['journal?']) continue;
-
             const promise = (async () => {
               let updatedTime: number | undefined = 0;
               if (currentDirHandle) {
@@ -454,16 +502,22 @@ function App() {
               if (!blocks || blocks.length === 0) {
                 return;
               }
-              const [summary, image] = getSummary(blocks);
+              const [summary, image, properties] = getSummary(blocks);
+
+              const [tags, isExcluded] = parsePageNameAndProperties(page.originalName, properties);
+
               // Logseq has many meta pages that has no content. Skip them.
               // Detailed check for empty page
-              if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+              if (!isExcluded && summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+                const svg = await getSvg(tags);
                 await db.box.put({
                   graph: currentGraph,
                   name: page.originalName,
                   uuid: page.uuid,
                   time: updatedTime,
                   summary,
+                  properties,
+                  svg,
                   image,
                 });
               }
@@ -486,7 +540,7 @@ function App() {
         setLoading(false);
       }
     });
-  }, [currentDirHandle, currentGraph, preferredFormat]);
+  }, [currentDirHandle, currentGraph, preferredFormat, getSvg]);
 
   useEffect(() => { rebuildDB(); }, [rebuildDB]);
 
@@ -509,14 +563,22 @@ function App() {
           });
           if (!blocks) return;
 
-          const [summary, image] = getSummary(blocks);
+          const [summary, image, properties] = getSummary(blocks);
 
-          if (summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+          const [tags, isExcluded] = parsePageNameAndProperties(originalName, properties);
+
+          // console.log("properties: " + properties)
+
+          if (!isExcluded && summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+            console.log(tags);
+            const svg = await getSvg(tags);
             const box = await db.box.get([currentGraph, originalName]);
             if (box) {
               db.box.update([currentGraph, originalName], {
                 time: updatedTime,
                 summary,
+                properties,
+                svg,
                 image,
               });
             }
@@ -530,6 +592,8 @@ function App() {
                   uuid: page.uuid,
                   time: updatedTime,
                   summary,
+                  properties,
+                  svg,
                   image,
                 }).then(() => {
                   setTotalCardNumber(num => num + 1);
@@ -564,7 +628,7 @@ function App() {
     return () => {
       removeOnChanged();
     }
-  }, [currentGraph]);
+  }, [currentGraph, getSvg]);
 
   useEffect(() => {
     const handleKeyDown = (e: { key: string; shiftKey: boolean; }) => {
@@ -717,14 +781,14 @@ function App() {
     // Calling deep link is very slow. Use pushState() instead.
     // <a href={`logseq://graph/${currentGraph}?page=${encodeURIComponent(box.originalName)}`}>
 
-    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} id={box.uuid}>
+    <div className={'box' + (selectedBox === index ? ' selectedBox' : '')} onClick={e => boxOnClick(box, e)} id={box.uuid} style={{ backgroundImage: box.svg !== '' ? "url('data:image/svg+xml," + encodeURIComponent(box.svg) + "')" : "none" }}>
       <div className='box-title'>
         {box.name}
       </div>
       <div className='box-summary' style={{ display: box.image === '' ? 'block' : 'none' }}>
         {box.summary.map(item => (<>{item}<br /></>))}
       </div>
-      <div className='box-image' style={{ display: box.image !== '' ? 'block' : 'none' }}>
+      <div className='box-image' style={{ display: box.image !== '' ? 'block' : 'none', opacity: box.svg !== '' ? '0.5' : '1' }}>
         <img src={currentGraph.replace('logseq_local_', '') + '/assets/' + box.image} style={{ width: '140px' }} alt='(image)' />
       </div>
       <div className='box-date' style={{ display: 'none' }}>
