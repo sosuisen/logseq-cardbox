@@ -249,11 +249,6 @@ const parseOperation = (changes: FileChanges): [Operation, string] => {
   return [operation, originalName];
 };
 
-const initWasm = async () => {
-  const { getAssemblyExports, getConfig } = await dotnet.create();
-  const config = getConfig();
-  return await getAssemblyExports(config.mainAssemblyName);
-};
 
 const dirHandles: { [graphName: string]: FileSystemDirectoryHandle } = {};
 
@@ -427,14 +422,19 @@ function App() {
   }, [tag, currentGraph, totalCardNumber]);
 
   useEffect(() => {
-    const getUserConfigs = async () => {
+    const getConfigs = async () => {
+      const { getAssemblyExports, getConfig } = await dotnet.create();
+      const config = getConfig();
+      const exports = await getAssemblyExports(config.mainAssemblyName);   
+      setWasmExports(exports);
+
       const { currentGraph, preferredDateFormat, preferredLanguage, preferredFormat } = await logseq.App.getUserConfigs();
       setCurrentGraph(currentGraph);
       setPreferredDateFormat(preferredDateFormat);
       setPreferredFormat(preferredFormat);
       i18n.changeLanguage(preferredLanguage);
     };
-    getUserConfigs();
+    getConfigs();
 
     return logseq.App.onCurrentGraphChanged(async () => {
       const { currentGraph } = await logseq.App.getUserConfigs();
@@ -447,9 +447,6 @@ function App() {
 
   const getSvg = useCallback(async (tags: string[]): Promise<string> => {
     let svg = "";
-    if (!wasmExports) {
-      setWasmExports(await initWasm());
-    }
     for (const tag of tags) {
       const trimmedTag = tag.trim();
       // @ts-expect-error wasmExports is from .NET
@@ -509,6 +506,7 @@ function App() {
               // Logseq has many meta pages that has no content. Skip them.
               // Detailed check for empty page
               if (!isExcluded && summary.length > 0 && !(summary.length === 1 && summary[0] === '')) {
+                console.log(tags);
                 const svg = await getSvg(tags);
                 await db.box.put({
                   graph: currentGraph,
